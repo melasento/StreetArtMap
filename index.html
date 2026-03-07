@@ -1,0 +1,1697 @@
+<!DOCTYPE html>
+<html lang="it">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
+<title>StreetArt Map Roma</title>
+
+<!-- PWA Meta Tags -->
+<meta name="application-name" content="StreetArt Roma">
+<meta name="description" content="Mappa interattiva della street art di Roma — artisti, murales, esibizioni dal vivo">
+<meta name="theme-color" content="#1A1025">
+<meta name="mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+<meta name="apple-mobile-web-app-title" content="StreetArt Roma">
+
+<!-- Open Graph (per condivisione link) -->
+<meta property="og:title" content="StreetArt Map Roma">
+<meta property="og:description" content="Mappa interattiva della street art di Roma">
+<meta property="og:type" content="website">
+
+<!-- PWA Manifest (inline come data URI per funzionare anche da file://) -->
+<link rel="manifest" href="data:application/json;charset=utf-8,%7B%22name%22%3A%22StreetArt%20Map%20Roma%22%2C%22short_name%22%3A%22StreetArt%20Roma%22%2C%22description%22%3A%22Mappa%20interattiva%20della%20street%20art%20di%20Roma%22%2C%22start_url%22%3A%22.%2F%22%2C%22display%22%3A%22standalone%22%2C%22background_color%22%3A%22%231A1025%22%2C%22theme_color%22%3A%22%231A1025%22%2C%22orientation%22%3A%22portrait%22%2C%22icons%22%3A%5B%7B%22src%22%3A%22data%3Aimage%2Fsvg%2Bxml%2C%253Csvg%2520xmlns%3D'http%3A%2F%2Fwww.w3.org%2F2000%2Fsvg'%2520viewBox%3D'0%25200%252096%252096'%253E%253Crect%2520width%3D'96'%2520height%3D'96'%2520rx%3D'18'%2520fill%3D'%25231A1025'%2F%253E%253Ctext%2520x%3D'48'%2520y%3D'68'%2520font-size%3D'56'%2520text-anchor%3D'middle'%253E%25F0%259F%258E%25A8%253C%2Ftext%253E%253C%2Fsvg%253E%22%2C%22sizes%22%3A%22any%22%2C%22type%22%3A%22image%2Fsvg%2Bxml%22%2C%22purpose%22%3A%22any%20maskable%22%7D%5D%7D">
+
+<!-- Apple touch icon (emoji palette su sfondo scuro) -->
+<link rel="apple-touch-icon" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 96 96'><rect width='96' height='96' rx='18' fill='%231A1025'/><text x='48' y='68' font-size='56' text-anchor='middle'>🎨</text></svg>">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Bebas+Neue&family=DM+Sans:ital,wght@0,400;0,500;0,600;0,700;1,400&display=swap" rel="stylesheet">
+<link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css"/>
+<script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
+<style>
+:root{--ink:#1A1025;--purple:#7B2FBE;--gold:#E8A000;--rust:#C94B22;--sage:#4A8C5C;--sky:#2E7BB4;--pink:#D4467A;--cream:#FAF7F2;--paper:#F2EDE6;--gray-light:#EAE5DC;--gray-mid:#BFB8AE;--gray-text:#6B6258;--r:10px;--sh:0 2px 10px rgba(26,16,37,.08);--shl:0 8px 32px rgba(26,16,37,.16)}
+*{box-sizing:border-box;margin:0;padding:0}
+body{font-family:'DM Sans',sans-serif;background:var(--paper);color:var(--ink);height:100vh;display:flex;flex-direction:column;overflow:hidden}
+.header{background:var(--ink);position:relative;flex-shrink:0}
+.skyline-wrap{position:relative;width:100%;line-height:0}
+.skyline-svg{width:100%;height:68px;display:block}
+.header-top{display:flex;align-items:flex-start;justify-content:space-between;padding:12px 20px 8px;position:relative;z-index:4001}
+.header-title{font-family:'Bebas Neue',sans-serif;font-size:32px;color:#fff;letter-spacing:2px;line-height:1}
+.header-title .art{color:var(--gold)}
+.header-title .city{font-size:13px;letter-spacing:4px;color:#9990AB;display:block;font-family:'DM Sans',sans-serif;font-weight:500;margin-top:1px;text-transform:uppercase}
+.header-sub{font-size:11.5px;color:rgba(255,255,255,.45);max-width:200px;line-height:1.5;text-align:right;margin-top:4px}
+.search-row{display:flex;gap:8px;padding:10px 16px;background:var(--cream);border-bottom:1px solid var(--gray-light);flex-shrink:0}
+.search-box{flex:1;display:flex;align-items:center;gap:8px;background:#fff;border-radius:var(--r);padding:9px 13px;border:1.5px solid var(--gray-light)}
+.search-box input{border:none;background:transparent;outline:none;font-size:13.5px;font-family:'DM Sans',sans-serif;color:var(--ink);width:100%}
+.search-box input::placeholder{color:var(--gray-mid)}
+.filter-btn{display:flex;align-items:center;gap:5px;border:1.5px solid var(--gray-light);border-radius:var(--r);padding:9px 13px;background:#fff;cursor:pointer;font-size:13px;font-family:'DM Sans',sans-serif;font-weight:600;color:var(--ink);transition:all .15s}
+.filter-btn:hover{background:var(--gray-light)}
+.toolbar{display:flex;align-items:center;gap:8px;padding:8px 16px;background:var(--cream);border-bottom:1px solid var(--gray-light);flex-shrink:0;flex-wrap:wrap}
+.tab-btn{display:flex;align-items:center;gap:5px;padding:7px 12px;border-radius:8px;border:1.5px solid transparent;background:transparent;cursor:pointer;font-size:13px;font-family:'DM Sans',sans-serif;font-weight:500;color:var(--gray-text);transition:all .15s}
+.tab-btn.active{border-color:#D6C6E8;background:#EFE8F7;color:var(--purple);font-weight:700}
+.view-toggle{display:flex;border:1.5px solid var(--gray-light);border-radius:8px;overflow:hidden}
+.view-btn{display:flex;align-items:center;gap:4px;padding:6px 11px;border:none;background:#fff;cursor:pointer;font-size:12px;font-family:'DM Sans',sans-serif;font-weight:600;color:var(--ink);transition:all .15s}
+.view-btn.active{background:var(--purple);color:#fff}
+.add-btn{display:flex;align-items:center;gap:5px;padding:8px 14px;background:var(--gold);color:var(--ink);border:none;border-radius:8px;cursor:pointer;font-size:13px;font-family:'DM Sans',sans-serif;font-weight:700;margin-left:auto;transition:all .15s}
+.add-btn:hover{background:#CC8C00;transform:translateY(-1px)}
+.cats-scroll{display:flex;gap:7px;padding:8px 16px;background:var(--cream);border-bottom:1px solid var(--gray-light);overflow-x:auto;flex-shrink:0;scrollbar-width:none}
+.cats-scroll::-webkit-scrollbar{display:none}
+.cat-pill{display:flex;align-items:center;gap:5px;padding:6px 12px;border-radius:20px;border:1.5px solid var(--gray-light);background:#fff;cursor:pointer;font-size:12.5px;font-family:'DM Sans',sans-serif;font-weight:600;color:var(--ink);white-space:nowrap;flex-shrink:0;transition:all .15s}
+.cat-pill:hover{border-color:var(--gray-mid)}
+.cat-pill.active{color:#fff;border-color:transparent}
+.main{flex:1;overflow:hidden;position:relative}
+#map{width:100%;height:100%}
+.custom-marker{width:20px;height:20px;border-radius:50%;border:2.5px solid white;box-shadow:0 2px 6px rgba(0,0,0,.3);cursor:pointer;transition:transform .15s}
+.custom-marker:hover{transform:scale(1.4)}
+.artist-popup{position:absolute;bottom:16px;left:16px;right:16px;background:#fff;border-radius:14px;box-shadow:var(--shl);padding:14px 16px;display:none;z-index:1000;animation:slideUp .2s ease;border:1px solid var(--gray-light)}
+.artist-popup.show{display:flex;align-items:center;gap:12px}
+@keyframes slideUp{from{opacity:0;transform:translateY(10px)}to{opacity:1;transform:translateY(0)}}
+.popup-dot{width:11px;height:11px;border-radius:50%;flex-shrink:0}
+.popup-name{font-weight:700;font-size:15px;color:var(--ink)}
+.popup-zone{font-size:12px;color:var(--gray-text);margin-top:2px}
+.popup-rating{display:flex;align-items:center;gap:3px;font-size:12px;font-weight:600}
+.popup-rating .star{color:var(--gold)}
+.popup-info{flex:1}
+.popup-open-btn{padding:8px 14px;background:var(--purple);color:#fff;border:none;border-radius:8px;cursor:pointer;font-size:13px;font-family:'DM Sans',sans-serif;font-weight:600;transition:all .15s}
+.popup-open-btn:hover{background:#6521A4}
+.popup-close{position:absolute;top:8px;right:8px;background:none;border:none;cursor:pointer;color:var(--gray-mid);font-size:14px}
+.list-view{display:none;height:100%;overflow-y:auto;padding:14px;gap:10px;flex-direction:column;background:var(--paper)}
+.list-view.show{display:flex}
+.artist-card{display:flex;align-items:center;gap:12px;background:#fff;border-radius:var(--r);padding:13px;box-shadow:var(--sh);cursor:pointer;transition:all .15s;border:1px solid var(--gray-light)}
+.artist-card:hover{transform:translateY(-2px);box-shadow:var(--shl)}
+.card-avatar{width:48px;height:48px;border-radius:50%;display:flex;align-items:center;justify-content:center;font-size:20px;flex-shrink:0}
+.card-name{font-weight:700;font-size:14.5px;color:var(--ink)}
+.card-pseudo{font-size:11px;color:var(--purple);font-weight:600;margin-top:1px}
+.card-zone{font-size:12px;color:var(--gray-text);margin-top:2px}
+.card-rating{display:flex;align-items:center;gap:3px;font-size:12px;font-weight:600;margin-top:3px}
+.card-rating .star{color:var(--gold);font-size:11px}
+.card-info{flex:1}
+.card-dot{width:8px;height:8px;border-radius:50%;flex-shrink:0}
+.card-chevron{color:var(--gray-light);font-size:18px}
+.exh-card{display:flex;background:#fff;border-radius:var(--r);overflow:hidden;box-shadow:var(--sh);cursor:pointer;transition:all .15s;border:1px solid var(--gray-light)}
+.exh-card:hover{transform:translateY(-2px);box-shadow:var(--shl)}
+.ex-date-box{width:58px;display:flex;flex-direction:column;align-items:center;justify-content:center;padding:10px;color:#fff;flex-shrink:0}
+.ex-date-day{font-family:'Bebas Neue',sans-serif;font-size:24px;line-height:1}
+.ex-date-month{font-size:10px;font-weight:600;opacity:.85;margin-top:1px}
+.ex-info{flex:1;padding:12px 13px}
+.ex-title{font-weight:700;font-size:14px;color:var(--ink)}
+.ex-artist{font-size:12px;color:var(--gray-text);margin-top:2px}
+.ex-location{font-size:12px;color:var(--gray-mid);margin-top:3px}
+.ex-tags{display:flex;gap:6px;margin-top:6px}
+.tag{font-size:10px;font-weight:700;padding:2px 8px;border-radius:10px}
+.tag-time{background:#EFE8F7;color:var(--purple)}
+.tag-free{background:#E8F5EE;color:#2E7D4F}
+.footer{background:var(--ink);padding:7px 20px;text-align:center;font-size:12.5px;color:rgba(255,255,255,.45);flex-shrink:0}
+.footer strong{color:var(--gold);font-weight:700}
+.modal-overlay{position:fixed;inset:0;background:rgba(26,16,37,.5);z-index:2000;display:none;align-items:flex-end;justify-content:center}
+.modal-overlay.show{display:flex}
+.modal{background:var(--cream);border-radius:20px 20px 0 0;width:100%;max-width:640px;max-height:92vh;overflow-y:auto;animation:slideUpModal .28s ease}
+@keyframes slideUpModal{from{transform:translateY(60px);opacity:0}to{transform:translateY(0);opacity:1}}
+.modal-header{display:flex;align-items:center;justify-content:space-between;padding:16px 20px 12px;border-bottom:1px solid var(--gray-light);position:sticky;top:0;background:var(--cream);border-radius:20px 20px 0 0;z-index:1}
+.modal-title{font-family:'Bebas Neue',sans-serif;font-size:20px;letter-spacing:1px;color:var(--ink)}
+.modal-close{background:var(--gray-light);border:none;border-radius:50%;width:30px;height:30px;cursor:pointer;font-size:15px;display:flex;align-items:center;justify-content:center;transition:all .15s}
+.modal-close:hover{background:var(--gray-mid)}
+.modal-body{padding:20px}
+.artist-detail-avatar{width:80px;height:80px;border-radius:50%;display:flex;align-items:center;justify-content:center;font-size:34px;margin:0 auto 12px}
+.artist-detail-name{font-family:'Bebas Neue',sans-serif;font-size:26px;text-align:center;letter-spacing:1px;color:var(--ink)}
+.artist-pseudo{text-align:center;font-size:12px;color:var(--purple);font-weight:700;letter-spacing:1px;text-transform:uppercase;margin-top:2px}
+.artist-detail-rating{display:flex;align-items:center;justify-content:center;gap:3px;margin-top:6px}
+.sf{color:var(--gold)}.se{color:var(--gray-light)}
+.rating-text{font-size:13px;font-weight:700;color:var(--ink)}
+.rating-count{font-size:12px;color:var(--gray-text)}
+.cat-badge{display:flex;align-items:center;gap:4px;padding:4px 14px;border-radius:20px;font-size:11px;font-weight:700;color:#fff;width:fit-content;margin:8px auto 0}
+.detail-location{display:flex;align-items:center;justify-content:center;gap:4px;font-size:12.5px;color:var(--gray-text);margin-top:5px}
+.social-links{display:flex;gap:8px;justify-content:center;margin-top:12px;flex-wrap:wrap}
+.social-link{display:flex;align-items:center;gap:5px;padding:5px 12px;border-radius:20px;border:1.5px solid var(--gray-light);font-size:12px;font-weight:600;color:var(--ink);text-decoration:none;background:#fff;transition:all .15s}
+.social-link:hover{background:var(--gray-light)}
+.social-ig{border-color:#E1306C;color:#E1306C}
+.social-web{border-color:var(--purple);color:var(--purple)}
+.divider{height:1px;background:var(--gray-light);margin:16px 0}
+.section-title{font-family:'Bebas Neue',sans-serif;font-size:16px;letter-spacing:1px;color:var(--ink);margin-bottom:8px}
+.bio-text{font-size:13.5px;color:var(--gray-text);line-height:1.65}
+.perf-pills{display:flex;flex-wrap:wrap;gap:7px}
+.perf-pill{display:flex;align-items:center;gap:4px;background:#EFE8F7;padding:5px 11px;border-radius:20px;font-size:12px;color:var(--purple);font-weight:500}
+.review-card{background:#fff;border-radius:10px;padding:12px;margin-bottom:8px;border:1px solid var(--gray-light)}
+.review-header{display:flex;align-items:center;gap:8px;margin-bottom:6px}
+.review-avatar{width:32px;height:32px;border-radius:50%;background:#EFE8F7;display:flex;align-items:center;justify-content:center;font-size:12px;font-weight:700;color:var(--purple)}
+.review-author{font-size:13px;font-weight:700;color:var(--ink)}
+.review-date{font-size:11px;color:var(--gray-mid)}
+.review-text{font-size:13px;color:var(--gray-text);line-height:1.5}
+.review-stars{display:flex;gap:1px}
+.star-picker{display:flex;gap:6px;margin-bottom:10px}
+.star-pick{font-size:24px;cursor:pointer;transition:transform .1s;color:var(--gray-light)}
+.star-pick:hover,.star-pick.active{color:var(--gold);transform:scale(1.2)}
+.review-textarea{width:100%;border:1.5px solid var(--gray-light);border-radius:10px;padding:11px 13px;font-size:13.5px;font-family:'DM Sans',sans-serif;resize:none;outline:none;color:var(--ink);background:#fff;transition:border-color .15s}
+.review-textarea:focus{border-color:var(--purple)}
+.submit-btn{width:100%;padding:13px;background:var(--purple);color:#fff;border:none;border-radius:10px;font-size:15px;font-family:'Bebas Neue',sans-serif;letter-spacing:1px;cursor:pointer;margin-top:10px;transition:all .15s}
+.submit-btn:hover{background:#6521A4}
+.type-toggle{display:flex;background:var(--gray-light);border-radius:10px;padding:4px;margin-bottom:18px}
+.type-btn{flex:1;display:flex;align-items:center;justify-content:center;gap:6px;padding:9px;border:none;border-radius:8px;background:transparent;cursor:pointer;font-size:13.5px;font-family:'DM Sans',sans-serif;font-weight:500;color:var(--gray-text);transition:all .15s}
+.type-btn.active{background:#fff;color:var(--purple);font-weight:700;box-shadow:0 1px 6px rgba(0,0,0,.08)}
+.form-field{margin-bottom:15px}
+.form-label{font-size:12px;font-weight:700;color:var(--ink);margin-bottom:5px;display:block;letter-spacing:.5px;text-transform:uppercase}
+.form-input{width:100%;border:1.5px solid var(--gray-light);border-radius:9px;padding:10px 13px;font-size:13.5px;font-family:'DM Sans',sans-serif;outline:none;color:var(--ink);background:#fff;transition:border-color .15s}
+.form-input:focus{border-color:var(--purple)}
+.cat-grid{display:flex;flex-wrap:wrap;gap:7px}
+.cat-option{display:flex;align-items:center;gap:4px;padding:6px 11px;border-radius:20px;border:1.5px solid var(--gray-light);background:#fff;cursor:pointer;font-size:12.5px;font-family:'DM Sans',sans-serif;font-weight:500;color:var(--ink);transition:all .15s}
+.cat-option.selected{font-weight:700}
+.empty-state{display:flex;flex-direction:column;align-items:center;justify-content:center;padding:40px 20px;color:var(--gray-mid);gap:8px;font-size:14px}
+.empty-icon{font-size:34px}
+.list-view::-webkit-scrollbar{width:3px}
+.list-view::-webkit-scrollbar-thumb{background:var(--gray-light);border-radius:4px}
+.modal::-webkit-scrollbar{width:3px}
+.modal::-webkit-scrollbar-thumb{background:var(--gray-light);border-radius:4px}
+
+/* ── LANGUAGE SELECTOR ── */
+.lang-btn{background:none;border:1.5px solid rgba(255,255,255,.25);border-radius:8px;color:#fff;padding:5px 10px;cursor:pointer;font-size:14px;font-family:'DM Sans',sans-serif;font-weight:600;display:flex;align-items:center;gap:6px;transition:all .15s;white-space:nowrap;line-height:1.4}
+.lang-btn:hover{background:rgba(255,255,255,.15);border-color:rgba(255,255,255,.5)}
+.lang-wrap{position:relative}
+/* Dropdown uses fixed positioning — appended to body so it's never clipped */
+#langPortal{
+  position:fixed;
+  background:#fff;
+  border-radius:14px;
+  box-shadow:0 12px 40px rgba(0,0,0,.3);
+  z-index:99999;
+  width:210px;
+  max-height:400px;
+  overflow-y:auto;
+  display:none;
+  border:1px solid rgba(0,0,0,.07);
+}
+#langPortal.open{display:block;animation:fadeDropDown .15s ease}
+@keyframes fadeDropDown{from{opacity:0;transform:translateY(-4px)}to{opacity:1;transform:translateY(0)}}
+#langPortal::-webkit-scrollbar{width:3px}
+#langPortal::-webkit-scrollbar-thumb{background:#EAE5DC;border-radius:4px}
+.lang-option{display:flex;align-items:center;gap:10px;padding:11px 16px;cursor:pointer;font-size:13.5px;font-family:'DM Sans',sans-serif;font-weight:500;color:#1A1025;transition:background .1s;border-bottom:1px solid #F5F3EE}
+.lang-option:last-child{border-bottom:none}
+.lang-option:hover{background:#F5F3FF}
+.lang-option.active{background:#EFE8F7;color:#7B2FBE;font-weight:700}
+.lang-flag{font-size:20px;line-height:1;flex-shrink:0}
+.lang-label{flex:1}
+
+/* ── GEOLOCATION ── */
+.user-dot-wrap{position:relative;width:20px;height:20px}
+.user-dot{width:16px;height:16px;background:#1A73E8;border-radius:50%;border:2.5px solid #fff;box-shadow:0 2px 8px rgba(26,115,232,.5);position:absolute;top:2px;left:2px;z-index:2}
+.user-dot-pulse{width:20px;height:20px;background:rgba(26,115,232,.25);border-radius:50%;position:absolute;top:0;left:0;animation:pulse 2s ease-out infinite}
+@keyframes pulse{0%{transform:scale(1);opacity:.7}100%{transform:scale(2.5);opacity:0}}
+.locate-btn{position:absolute;bottom:96px;right:14px;z-index:1000;width:40px;height:40px;background:#fff;border:none;border-radius:10px;box-shadow:0 2px 10px rgba(0,0,0,.2);cursor:pointer;display:flex;align-items:center;justify-content:center;font-size:18px;transition:all .15s}
+.locate-btn:hover{background:#F0F0F0;transform:scale(1.05)}
+.locate-btn.tracking{background:#E8F0FE}
+.geo-toast{position:absolute;top:14px;left:50%;transform:translateX(-50%);z-index:1001;background:rgba(26,16,37,.85);color:#fff;font-size:12.5px;font-family:'DM Sans',sans-serif;font-weight:500;padding:8px 16px;border-radius:20px;white-space:nowrap;pointer-events:none;opacity:0;transition:opacity .3s;backdrop-filter:blur(4px)}
+.geo-toast.show{opacity:1}
+.nearby-badge{background:#E8F0FE;color:#1A73E8;font-size:11px;font-weight:700;padding:2px 8px;border-radius:10px;margin-left:6px}
+.dist-text{font-size:11px;color:#1A73E8;font-weight:600;margin-top:2px}
+</style>
+</head>
+<body>
+
+<div class="header">
+  <div class="header-top">
+    <div>
+      <div class="header-title">Street<span class="art">Art</span> Map<span class="city">Roma</span></div>
+    </div>
+    <div style="display:flex;flex-direction:column;align-items:flex-end;gap:6px">
+      <div class="lang-wrap">
+        <button class="lang-btn" id="langBtn">🇮🇹 IT ▾</button>
+      </div>
+      <div class="header-sub" id="headerSub">Artisti di strada, murales e live art nella Città Eterna</div>
+    </div>
+  </div>
+  <div class="skyline-wrap">
+    <svg class="skyline-svg" viewBox="0 0 1200 68" preserveAspectRatio="xMidYMax meet" xmlns="http://www.w3.org/2000/svg">
+      <defs>
+        <linearGradient id="skyG" x1="0" y1="0" x2="0" y2="1"><stop offset="0%" stop-color="#1A1025"/><stop offset="100%" stop-color="#2D1B4E"/></linearGradient>
+        <linearGradient id="bG" x1="0" y1="0" x2="0" y2="1"><stop offset="0%" stop-color="#3A2E5A"/><stop offset="100%" stop-color="#2A2040"/></linearGradient>
+        <filter id="gw"><feGaussianBlur stdDeviation="1.5" result="b"/><feMerge><feMergeNode in="b"/><feMergeNode in="SourceGraphic"/></feMerge></filter>
+      </defs>
+      <rect width="1200" height="68" fill="url(#skyG)"/>
+      <!-- stars -->
+      <circle cx="50" cy="8" r=".8" fill="white" opacity=".5"/><circle cx="130" cy="5" r=".6" fill="white" opacity=".4"/>
+      <circle cx="350" cy="6" r=".9" fill="white" opacity=".6"/><circle cx="600" cy="4" r=".8" fill="white" opacity=".5"/>
+      <circle cx="730" cy="7" r=".7" fill="white" opacity=".4"/><circle cx="970" cy="9" r=".9" fill="white" opacity=".5"/>
+      <circle cx="1100" cy="6" r=".7" fill="white" opacity=".6"/>
+      <!-- bg silhouette -->
+      <g fill="#1E1535" opacity=".8">
+        <rect x="0" y="35" width="50" height="33"/><rect x="45" y="26" width="25" height="42"/>
+        <rect x="65" y="30" width="40" height="38"/><rect x="100" y="22" width="20" height="46"/>
+        <rect x="118" y="28" width="42" height="40"/><rect x="155" y="24" width="30" height="44"/>
+        <rect x="180" y="32" width="48" height="36"/><rect x="223" y="26" width="35" height="42"/>
+        <rect x="254" y="20" width="25" height="48"/><rect x="275" y="30" width="55" height="38"/>
+        <rect x="325" y="24" width="30" height="44"/><rect x="350" y="32" width="45" height="36"/>
+        <rect x="390" y="22" width="38" height="46"/><rect x="423" y="28" width="50" height="40"/>
+        <rect x="470" y="34" width="28" height="34"/><rect x="494" y="24" width="42" height="44"/>
+        <rect x="820" y="26" width="38" height="42"/><rect x="854" y="20" width="32" height="48"/>
+        <rect x="882" y="30" width="50" height="38"/><rect x="928" y="22" width="44" height="46"/>
+        <rect x="968" y="32" width="30" height="36"/><rect x="995" y="24" width="55" height="44"/>
+        <rect x="1045" y="30" width="40" height="38"/><rect x="1082" y="18" width="32" height="50"/>
+        <rect x="1110" y="26" width="48" height="42"/><rect x="1155" y="22" width="45" height="46"/>
+      </g>
+      <!-- CASTEL SANT'ANGELO -->
+      <g fill="url(#bG)">
+        <rect x="78" y="40" width="72" height="28"/>
+        <ellipse cx="114" cy="40" rx="36" ry="10" fill="#3A2E5A"/>
+        <rect x="82" y="30" width="64" height="12"/>
+        <ellipse cx="114" cy="30" rx="32" ry="7" fill="#2E2248"/>
+        <rect x="104" y="14" width="20" height="18"/>
+        <path d="M104,14 L114,5 L124,14 Z" fill="#E8A000" opacity=".9"/>
+        <circle cx="114" cy="8" r="3.5" fill="#F0BC44" opacity=".85" filter="url(#gw)"/>
+      </g>
+      <!-- PANTHEON -->
+      <g fill="url(#bG)">
+        <rect x="195" y="42" width="82" height="26"/>
+        <rect x="205" y="36" width="62" height="8"/>
+        <path d="M205,36 Q236,12 267,36" fill="#2D1B4E"/>
+        <ellipse cx="236" cy="36" rx="31" ry="6" fill="#3A2E5A"/>
+        <rect x="208" y="42" width="4" height="26" fill="#4A3870" opacity=".8"/>
+        <rect x="219" y="42" width="4" height="26" fill="#4A3870" opacity=".8"/>
+        <rect x="230" y="42" width="4" height="26" fill="#4A3870" opacity=".8"/>
+        <rect x="253" y="42" width="4" height="26" fill="#4A3870" opacity=".8"/>
+        <rect x="264" y="42" width="4" height="26" fill="#4A3870" opacity=".8"/>
+      </g>
+      <!-- COLOSSEO -->
+      <g fill="url(#bG)">
+        <rect x="530" y="34" width="130" height="34"/>
+        <path d="M530,34 Q543,22 556,34 Q569,22 582,34 Q595,22 608,34 Q621,22 634,34 Q647,22 660,34" stroke="#5A4880" stroke-width="1.2" fill="none"/>
+        <rect x="538" y="26" width="114" height="10"/>
+        <path d="M538,26 Q548,16 558,26 Q568,16 578,26 Q588,16 598,26 Q608,16 618,26 Q628,16 638,26 Q648,16 652,26" stroke="#5A4880" stroke-width=".8" fill="none"/>
+        <ellipse cx="595" cy="26" rx="57" ry="5" fill="#2E2248"/>
+      </g>
+      <!-- VITTORIANO -->
+      <g fill="url(#bG)">
+        <rect x="720" y="38" width="110" height="30"/>
+        <rect x="708" y="50" width="134" height="5" fill="#3A2E5A"/>
+        <rect x="696" y="56" width="158" height="4" fill="#2E2248"/>
+        <rect x="732" y="28" width="8" height="22" fill="#4A3870"/>
+        <rect x="746" y="28" width="8" height="22" fill="#4A3870"/>
+        <rect x="760" y="28" width="8" height="22" fill="#4A3870"/>
+        <rect x="774" y="28" width="8" height="22" fill="#4A3870"/>
+        <rect x="788" y="28" width="8" height="22" fill="#4A3870"/>
+        <rect x="802" y="28" width="8" height="22" fill="#4A3870"/>
+        <path d="M720,28 L775,9 L830,28 Z" fill="#2D1B4E"/>
+        <path d="M765,12 Q775,5 785,12" stroke="#E8A000" stroke-width="1.5" fill="none" opacity=".7"/>
+      </g>
+      <!-- SAN PIETRO -->
+      <g fill="url(#bG)">
+        <rect x="938" y="36" width="116" height="32"/>
+        <rect x="970" y="26" width="52" height="13"/>
+        <path d="M970,26 Q996,4 1022,26" fill="#2D1B4E"/>
+        <ellipse cx="996" cy="26" rx="26" ry="5" fill="#3A2E5A"/>
+        <rect x="991" y="11" width="10" height="17"/>
+        <circle cx="996" cy="9" r="4" fill="#E8A000" opacity=".75" filter="url(#gw)"/>
+        <rect x="886" y="48" width="7" height="20" fill="#3A2E5A"/>
+        <rect x="898" y="48" width="7" height="20" fill="#3A2E5A"/>
+        <rect x="910" y="48" width="7" height="20" fill="#3A2E5A"/>
+        <rect x="1076" y="48" width="7" height="20" fill="#3A2E5A"/>
+        <rect x="1088" y="48" width="7" height="20" fill="#3A2E5A"/>
+        <rect x="1100" y="48" width="7" height="20" fill="#3A2E5A"/>
+      </g>
+      <!-- horizon line -->
+      <rect x="0" y="66" width="1200" height="2" fill="#E8A000" opacity=".2"/>
+    </svg>
+  </div>
+</div>
+
+<div class="search-row">
+  <div class="search-box">
+    <span style="color:#BFB8AE;font-size:15px">🔍</span>
+    <input type="text" id="searchInput" placeholder="Cerca artista, pseudonimo o quartiere..." oninput="applyFilters()">
+  </div>
+  <button class="filter-btn">⚙️ Filtri</button>
+</div>
+
+<div class="toolbar">
+  <div style="display:flex;gap:4px">
+    <button class="tab-btn active" id="tab-artisti" onclick="switchTab('artisti')">👤 Artisti</button>
+    <button class="tab-btn" id="tab-esibizioni" onclick="switchTab('esibizioni')">📅 Esibizioni</button>
+  </div>
+  <div class="view-toggle">
+    <button class="view-btn active" id="view-mappa" onclick="switchView('mappa')">🗺️ Mappa</button>
+    <button class="view-btn" id="view-lista" onclick="switchView('lista')">☰ Lista</button>
+  </div>
+  <button class="add-btn" onclick="openAddModal()">＋ Aggiungi</button>
+</div>
+
+<div class="cats-scroll" id="catsContainer"></div>
+
+<div class="main">
+  <div id="map"></div>
+  <div class="list-view" id="listView"></div>
+  <button class="locate-btn" id="locateBtn" onclick="centerOnUser()" title="Vai alla mia posizione">📍</button>
+  <div class="geo-toast" id="geoToast"></div>
+  <div class="artist-popup" id="artistPopup">
+    <div class="popup-dot" id="popupDot"></div>
+    <div class="popup-info">
+      <div class="popup-name" id="popupName"></div>
+      <div class="popup-zone" id="popupZone"></div>
+      <div class="popup-rating"><span class="star">★</span><span id="popupRating"></span></div>
+    </div>
+    <button class="popup-open-btn" id="popupOpenBtn">Vedi →</button>
+    <button class="popup-close" onclick="closePopup()">✕</button>
+  </div>
+</div>
+
+<div class="footer" id="footer"></div>
+
+<!-- ARTIST MODAL -->
+<div class="modal-overlay" id="artistModal">
+  <div class="modal">
+    <div class="modal-header">
+      <button class="modal-close" onclick="closeArtistModal()">✕</button>
+      <div class="modal-title" id="artistModalTitle">Profilo Artista</div>
+      <div style="width:30px"></div>
+    </div>
+    <div class="modal-body" id="artistModalBody"></div>
+  </div>
+</div>
+
+<!-- ADD MODAL -->
+<div class="modal-overlay" id="addModal">
+  <div class="modal">
+    <div class="modal-header">
+      <button class="modal-close" onclick="closeAddModal()">✕</button>
+      <div class="modal-title" id="addModalTitle">Aggiungi</div>
+      <div style="width:30px"></div>
+    </div>
+    <div class="modal-body">
+      <div class="type-toggle">
+        <button class="type-btn active" id="addTypeArtista" onclick="switchAddType('artista')">👤 Artista</button>
+        <button class="type-btn" id="addTypeEsibizione" onclick="switchAddType('esibizione')">📅 Esibizione</button>
+      </div>
+      <div id="addFormFields"></div>
+      <button class="submit-btn" id="submitAddBtn" onclick="submitAdd()">AGGIUNGI</button>
+    </div>
+  </div>
+</div>
+
+<script>
+// ══════════════════════════════════════════
+//  I18N — MULTILANGUAGE SYSTEM
+// ══════════════════════════════════════════
+const LANGS=[
+  {code:'it',flag:'🇮🇹',label:'Italiano'},
+  {code:'en',flag:'🇬🇧',label:'English'},
+  {code:'es',flag:'🇪🇸',label:'Español'},
+  {code:'fr',flag:'🇫🇷',label:'Français'},
+  {code:'de',flag:'🇩🇪',label:'Deutsch'},
+  {code:'pt',flag:'🇵🇹',label:'Português'},
+  {code:'nl',flag:'🇳🇱',label:'Nederlands'},
+  {code:'pl',flag:'🇵🇱',label:'Polski'},
+  {code:'ru',flag:'🇷🇺',label:'Русский'},
+  {code:'zh',flag:'🇨🇳',label:'中文'},
+  {code:'ja',flag:'🇯🇵',label:'日本語'},
+  {code:'ar',flag:'🇸🇦',label:'العربية'},
+];
+
+const T={
+  it:{
+    subtitle:'Artisti di strada, murales e live art nella Città Eterna',
+    searchPlaceholder:'Cerca artista, pseudonimo o quartiere...',
+    filters:'Filtri',tabArtists:'Artisti',tabExhibitions:'Esibizioni',
+    viewMap:'Mappa',viewList:'Lista',addBtn:'Aggiungi',
+    catAll:'Tutti',catMurales:'Murales',catStencil:'Stencil',catMusic:'Musica',
+    catSculpture:'Scultura',catDrawing:'Disegno',catTheatre:'Teatro',catJuggling:'Giocoleria',catOther:'Altro',
+    footer:(a,e)=>`<strong>${a} artisti</strong> &nbsp;•&nbsp; <strong>${e} esibizioni</strong> in programma`,
+    nearby:'Vicino',fromYou:'da te',
+    profileTitle:'Profilo Artista',bio:'Bio',performanceZones:'Zone di esibizione',
+    reviews:'Recensioni',leaveReview:'Lascia una recensione',sendReview:'INVIA RECENSIONE',
+    reviewPlaceholder:'Descrivi la tua esperienza con questo artista...',
+    socialIG:'Instagram',socialWeb:'Sito ufficiale',
+    addTitle:'Aggiungi',addArtist:'Artista',addExhibition:'Esibizione',
+    nameLabel:'Nome *',pseudoLabel:"Nome d'arte",zoneLabel:'Zona *',bioLabel:'Bio',
+    titleLabel:'Titolo *',dateLabel:'Data *',timeLabel:'Orario',locationLabel:'Luogo *',
+    catLabel:'Categoria *',submitAdd:'AGGIUNGI',
+    alertFillArtist:'Compila nome, zona e categoria.',alertFillExh:'Compila tutti i campi obbligatori.',
+    alertAddedArtist:(n)=>`✅ Artista "${n}" aggiunto!`,alertAddedExh:(t)=>`✅ Esibizione "${t}" aggiunta!`,
+    alertReview:'Scrivi una recensione e seleziona un voto.',
+    free:'GRATUITO',see:'Vedi →',youAreHere:'📍 Sei qui',
+    namePlaceholder:'Nome completo',pseudoPlaceholder:'Pseudonimo o firma artistica',
+    zonePlaceholder:'Es. Trastevere, Roma',bioPlaceholder:"Descrivi l'artista...",
+    titlePlaceholder:"Titolo dell'esibizione",locationPlaceholder:'Es. Piazza della Rotonda, Roma',
+    geoSearching:'🔍 Ricerca posizione…',geoFound:'✅ Posizione trovata!',geoCentered:'📍 Centrato sulla tua posizione',
+    geoErr1:'Permesso posizione negato. Abilitalo nelle impostazioni.',geoErr2:'Posizione non disponibile.',geoErr3:'Timeout — riprova.',geoNA:'GPS non disponibile su questo browser',
+    emptyArtists:'Nessun artista trovato',emptyExhibitions:'Nessuna esibizione trovata',
+  },
+  en:{
+    subtitle:'Street artists, murals and live art in the Eternal City',
+    searchPlaceholder:'Search artist, nickname or neighbourhood...',
+    filters:'Filters',tabArtists:'Artists',tabExhibitions:'Exhibitions',
+    viewMap:'Map',viewList:'List',addBtn:'Add',
+    catAll:'All',catMurales:'Murals',catStencil:'Stencil',catMusic:'Music',
+    catSculpture:'Sculpture',catDrawing:'Drawing',catTheatre:'Theatre',catJuggling:'Juggling',catOther:'Other',
+    footer:(a,e)=>`<strong>${a} artists</strong> &nbsp;•&nbsp; <strong>${e} exhibitions</strong> scheduled`,
+    nearby:'Nearby',fromYou:'from you',
+    profileTitle:'Artist Profile',bio:'Bio',performanceZones:'Performance zones',
+    reviews:'Reviews',leaveReview:'Leave a review',sendReview:'SEND REVIEW',
+    reviewPlaceholder:'Describe your experience with this artist...',
+    socialIG:'Instagram',socialWeb:'Official website',
+    addTitle:'Add',addArtist:'Artist',addExhibition:'Exhibition',
+    nameLabel:'Name *',pseudoLabel:'Stage name',zoneLabel:'Area *',bioLabel:'Bio',
+    titleLabel:'Title *',dateLabel:'Date *',timeLabel:'Time',locationLabel:'Location *',
+    catLabel:'Category *',submitAdd:'ADD',
+    alertFillArtist:'Please fill in name, area and category.',alertFillExh:'Please fill in all required fields.',
+    alertAddedArtist:(n)=>`✅ Artist "${n}" added!`,alertAddedExh:(t)=>`✅ Exhibition "${t}" added!`,
+    alertReview:'Please write a review and select a rating.',
+    free:'FREE',see:'See →',youAreHere:'📍 You are here',
+    namePlaceholder:'Full name',pseudoPlaceholder:'Nickname or artistic signature',
+    zonePlaceholder:'e.g. Trastevere, Rome',bioPlaceholder:'Describe the artist...',
+    titlePlaceholder:'Exhibition title',locationPlaceholder:'e.g. Piazza della Rotonda, Rome',
+    geoSearching:'🔍 Searching location…',geoFound:'✅ Location found!',geoCentered:'📍 Centred on your location',
+    geoErr1:'Location permission denied. Enable it in browser settings.',geoErr2:'Location unavailable.',geoErr3:'Timeout — try again.',geoNA:'GPS not available in this browser',
+    emptyArtists:'No artists found',emptyExhibitions:'No exhibitions found',
+  },
+  es:{
+    subtitle:'Artistas callejeros, murales y arte en vivo en la Ciudad Eterna',
+    searchPlaceholder:'Buscar artista, seudónimo o barrio...',
+    filters:'Filtros',tabArtists:'Artistas',tabExhibitions:'Exposiciones',
+    viewMap:'Mapa',viewList:'Lista',addBtn:'Añadir',
+    catAll:'Todos',catMurales:'Murales',catStencil:'Stencil',catMusic:'Música',
+    catSculpture:'Escultura',catDrawing:'Dibujo',catTheatre:'Teatro',catJuggling:'Malabarismo',catOther:'Otro',
+    footer:(a,e)=>`<strong>${a} artistas</strong> &nbsp;•&nbsp; <strong>${e} exposiciones</strong> programadas`,
+    nearby:'Cerca',fromYou:'de ti',
+    profileTitle:'Perfil del Artista',bio:'Bio',performanceZones:'Zonas de actuación',
+    reviews:'Reseñas',leaveReview:'Deja una reseña',sendReview:'ENVIAR RESEÑA',
+    reviewPlaceholder:'Describe tu experiencia con este artista...',
+    socialIG:'Instagram',socialWeb:'Sitio oficial',
+    addTitle:'Añadir',addArtist:'Artista',addExhibition:'Exposición',
+    nameLabel:'Nombre *',pseudoLabel:'Nombre artístico',zoneLabel:'Zona *',bioLabel:'Bio',
+    titleLabel:'Título *',dateLabel:'Fecha *',timeLabel:'Hora',locationLabel:'Lugar *',
+    catLabel:'Categoría *',submitAdd:'AÑADIR',
+    alertFillArtist:'Completa nombre, zona y categoría.',alertFillExh:'Completa todos los campos obligatorios.',
+    alertAddedArtist:(n)=>`✅ Artista "${n}" añadido!`,alertAddedExh:(t)=>`✅ Exposición "${t}" añadida!`,
+    alertReview:'Escribe una reseña y selecciona una puntuación.',
+    free:'GRATIS',see:'Ver →',youAreHere:'📍 Estás aquí',
+    namePlaceholder:'Nombre completo',pseudoPlaceholder:'Seudónimo o firma artística',
+    zonePlaceholder:'Ej. Trastevere, Roma',bioPlaceholder:'Describe al artista...',
+    titlePlaceholder:'Título de la exposición',locationPlaceholder:'Ej. Piazza della Rotonda, Roma',
+    geoSearching:'🔍 Buscando ubicación…',geoFound:'✅ ¡Ubicación encontrada!',geoCentered:'📍 Centrado en tu ubicación',
+    geoErr1:'Permiso de ubicación denegado.',geoErr2:'Ubicación no disponible.',geoErr3:'Tiempo de espera — inténtalo de nuevo.',geoNA:'GPS no disponible en este navegador',
+    emptyArtists:'No se encontraron artistas',emptyExhibitions:'No se encontraron exposiciones',
+  },
+  fr:{
+    subtitle:'Artistes de rue, fresques et art en direct dans la Ville Éternelle',
+    searchPlaceholder:'Rechercher artiste, pseudonyme ou quartier...',
+    filters:'Filtres',tabArtists:'Artistes',tabExhibitions:'Expositions',
+    viewMap:'Carte',viewList:'Liste',addBtn:'Ajouter',
+    catAll:'Tous',catMurales:'Fresques',catStencil:'Pochoir',catMusic:'Musique',
+    catSculpture:'Sculpture',catDrawing:'Dessin',catTheatre:'Théâtre',catJuggling:'Jonglerie',catOther:'Autre',
+    footer:(a,e)=>`<strong>${a} artistes</strong> &nbsp;•&nbsp; <strong>${e} expositions</strong> programmées`,
+    nearby:'À proximité',fromYou:'de vous',
+    profileTitle:"Profil de l'artiste",bio:'Bio',performanceZones:'Zones de performance',
+    reviews:'Avis',leaveReview:'Laisser un avis',sendReview:"ENVOYER L'AVIS",
+    reviewPlaceholder:'Décrivez votre expérience avec cet artiste...',
+    socialIG:'Instagram',socialWeb:'Site officiel',
+    addTitle:'Ajouter',addArtist:'Artiste',addExhibition:'Exposition',
+    nameLabel:'Nom *',pseudoLabel:'Nom de scène',zoneLabel:'Zone *',bioLabel:'Bio',
+    titleLabel:'Titre *',dateLabel:'Date *',timeLabel:'Heure',locationLabel:'Lieu *',
+    catLabel:'Catégorie *',submitAdd:'AJOUTER',
+    alertFillArtist:'Remplissez le nom, la zone et la catégorie.',alertFillExh:'Remplissez tous les champs obligatoires.',
+    alertAddedArtist:(n)=>`✅ Artiste "${n}" ajouté !`,alertAddedExh:(t)=>`✅ Exposition "${t}" ajoutée !`,
+    alertReview:'Rédigez un avis et sélectionnez une note.',
+    free:'GRATUIT',see:'Voir →',youAreHere:'📍 Vous êtes ici',
+    namePlaceholder:'Nom complet',pseudoPlaceholder:'Pseudonyme ou signature artistique',
+    zonePlaceholder:'Ex. Trastevere, Rome',bioPlaceholder:"Décrivez l'artiste...",
+    titlePlaceholder:"Titre de l'exposition",locationPlaceholder:'Ex. Piazza della Rotonda, Rome',
+    geoSearching:'🔍 Recherche de position…',geoFound:'✅ Position trouvée !',geoCentered:'📍 Centré sur votre position',
+    geoErr1:'Permission de localisation refusée.',geoErr2:'Localisation indisponible.',geoErr3:'Délai dépassé — réessayez.',geoNA:'GPS non disponible dans ce navigateur',
+    emptyArtists:'Aucun artiste trouvé',emptyExhibitions:'Aucune exposition trouvée',
+  },
+  de:{
+    subtitle:'Straßenkünstler, Wandgemälde und Live-Kunst in der Ewigen Stadt',
+    searchPlaceholder:'Künstler, Pseudonym oder Viertel suchen...',
+    filters:'Filter',tabArtists:'Künstler',tabExhibitions:'Ausstellungen',
+    viewMap:'Karte',viewList:'Liste',addBtn:'Hinzufügen',
+    catAll:'Alle',catMurales:'Wandmalerei',catStencil:'Schablone',catMusic:'Musik',
+    catSculpture:'Skulptur',catDrawing:'Zeichnung',catTheatre:'Theater',catJuggling:'Jonglieren',catOther:'Sonstige',
+    footer:(a,e)=>`<strong>${a} Künstler</strong> &nbsp;•&nbsp; <strong>${e} Ausstellungen</strong> geplant`,
+    nearby:'In der Nähe',fromYou:'von dir',
+    profileTitle:'Künstlerprofil',bio:'Bio',performanceZones:'Aufführungszonen',
+    reviews:'Bewertungen',leaveReview:'Bewertung hinterlassen',sendReview:'BEWERTUNG SENDEN',
+    reviewPlaceholder:'Beschreibe deine Erfahrung mit diesem Künstler...',
+    socialIG:'Instagram',socialWeb:'Offizielle Website',
+    addTitle:'Hinzufügen',addArtist:'Künstler',addExhibition:'Ausstellung',
+    nameLabel:'Name *',pseudoLabel:'Künstlername',zoneLabel:'Zone *',bioLabel:'Bio',
+    titleLabel:'Titel *',dateLabel:'Datum *',timeLabel:'Uhrzeit',locationLabel:'Ort *',
+    catLabel:'Kategorie *',submitAdd:'HINZUFÜGEN',
+    alertFillArtist:'Bitte Name, Zone und Kategorie ausfüllen.',alertFillExh:'Bitte alle Pflichtfelder ausfüllen.',
+    alertAddedArtist:(n)=>`✅ Künstler "${n}" hinzugefügt!`,alertAddedExh:(t)=>`✅ Ausstellung "${t}" hinzugefügt!`,
+    alertReview:'Bitte Bewertung schreiben und Note auswählen.',
+    free:'KOSTENLOS',see:'Ansehen →',youAreHere:'📍 Sie sind hier',
+    namePlaceholder:'Vollständiger Name',pseudoPlaceholder:'Pseudonym oder Künstlersignatur',
+    zonePlaceholder:'z.B. Trastevere, Rom',bioPlaceholder:'Beschreibe den Künstler...',
+    titlePlaceholder:'Titel der Ausstellung',locationPlaceholder:'z.B. Piazza della Rotonda, Rom',
+    geoSearching:'🔍 Standort wird gesucht…',geoFound:'✅ Standort gefunden!',geoCentered:'📍 Auf Ihren Standort zentriert',
+    geoErr1:'Standortberechtigung verweigert.',geoErr2:'Standort nicht verfügbar.',geoErr3:'Timeout — erneut versuchen.',geoNA:'GPS in diesem Browser nicht verfügbar',
+    emptyArtists:'Keine Künstler gefunden',emptyExhibitions:'Keine Ausstellungen gefunden',
+  },
+  pt:{
+    subtitle:'Artistas de rua, murais e arte ao vivo na Cidade Eterna',
+    searchPlaceholder:'Pesquisar artista, pseudónimo ou bairro...',
+    filters:'Filtros',tabArtists:'Artistas',tabExhibitions:'Exposições',
+    viewMap:'Mapa',viewList:'Lista',addBtn:'Adicionar',
+    catAll:'Todos',catMurales:'Murais',catStencil:'Stencil',catMusic:'Música',
+    catSculpture:'Escultura',catDrawing:'Desenho',catTheatre:'Teatro',catJuggling:'Malabarismo',catOther:'Outro',
+    footer:(a,e)=>`<strong>${a} artistas</strong> &nbsp;•&nbsp; <strong>${e} exposições</strong> programadas`,
+    nearby:'Perto',fromYou:'de você',
+    profileTitle:'Perfil do Artista',bio:'Bio',performanceZones:'Zonas de atuação',
+    reviews:'Avaliações',leaveReview:'Deixar uma avaliação',sendReview:'ENVIAR AVALIAÇÃO',
+    reviewPlaceholder:'Descreva a sua experiência com este artista...',
+    socialIG:'Instagram',socialWeb:'Site oficial',
+    addTitle:'Adicionar',addArtist:'Artista',addExhibition:'Exposição',
+    nameLabel:'Nome *',pseudoLabel:'Nome artístico',zoneLabel:'Zona *',bioLabel:'Bio',
+    titleLabel:'Título *',dateLabel:'Data *',timeLabel:'Hora',locationLabel:'Local *',
+    catLabel:'Categoria *',submitAdd:'ADICIONAR',
+    alertFillArtist:'Preencha o nome, zona e categoria.',alertFillExh:'Preencha todos os campos obrigatórios.',
+    alertAddedArtist:(n)=>`✅ Artista "${n}" adicionado!`,alertAddedExh:(t)=>`✅ Exposição "${t}" adicionada!`,
+    alertReview:'Escreva uma avaliação e selecione uma nota.',
+    free:'GRÁTIS',see:'Ver →',youAreHere:'📍 Você está aqui',
+    namePlaceholder:'Nome completo',pseudoPlaceholder:'Pseudónimo ou assinatura artística',
+    zonePlaceholder:'Ex. Trastevere, Roma',bioPlaceholder:'Descreva o artista...',
+    titlePlaceholder:'Título da exposição',locationPlaceholder:'Ex. Piazza della Rotonda, Roma',
+    geoSearching:'🔍 A procurar posição…',geoFound:'✅ Posição encontrada!',geoCentered:'📍 Centrado na sua posição',
+    geoErr1:'Permissão de localização negada.',geoErr2:'Localização indisponível.',geoErr3:'Timeout — tente novamente.',geoNA:'GPS não disponível neste navegador',
+    emptyArtists:'Nenhum artista encontrado',emptyExhibitions:'Nenhuma exposição encontrada',
+  },
+  nl:{
+    subtitle:'Straatartiesten, muurschilderingen en live kunst in de Eeuwige Stad',
+    searchPlaceholder:'Zoek artiest, pseudoniem of wijk...',
+    filters:'Filters',tabArtists:'Artiesten',tabExhibitions:'Tentoonstellingen',
+    viewMap:'Kaart',viewList:'Lijst',addBtn:'Toevoegen',
+    catAll:'Alle',catMurales:'Muurschilderingen',catStencil:'Sjabloon',catMusic:'Muziek',
+    catSculpture:'Beeldhouwwerk',catDrawing:'Tekening',catTheatre:'Theater',catJuggling:'Jongleren',catOther:'Overig',
+    footer:(a,e)=>`<strong>${a} artiesten</strong> &nbsp;•&nbsp; <strong>${e} tentoonstellingen</strong> gepland`,
+    nearby:'Dichtbij',fromYou:'van jou',
+    profileTitle:'Artiestenprofiel',bio:'Bio',performanceZones:'Optreedgebieden',
+    reviews:'Beoordelingen',leaveReview:'Laat een beoordeling achter',sendReview:'BEOORDELING STUREN',
+    reviewPlaceholder:'Beschrijf je ervaring met deze artiest...',
+    socialIG:'Instagram',socialWeb:'Officiële website',
+    addTitle:'Toevoegen',addArtist:'Artiest',addExhibition:'Tentoonstelling',
+    nameLabel:'Naam *',pseudoLabel:'Artiestennaam',zoneLabel:'Zone *',bioLabel:'Bio',
+    titleLabel:'Titel *',dateLabel:'Datum *',timeLabel:'Tijd',locationLabel:'Locatie *',
+    catLabel:'Categorie *',submitAdd:'TOEVOEGEN',
+    alertFillArtist:'Vul naam, zone en categorie in.',alertFillExh:'Vul alle verplichte velden in.',
+    alertAddedArtist:(n)=>`✅ Artiest "${n}" toegevoegd!`,alertAddedExh:(t)=>`✅ Tentoonstelling "${t}" toegevoegd!`,
+    alertReview:'Schrijf een beoordeling en selecteer een cijfer.',
+    free:'GRATIS',see:'Bekijk →',youAreHere:'📍 U bent hier',
+    namePlaceholder:'Volledige naam',pseudoPlaceholder:'Pseudoniem of artistieke handtekening',
+    zonePlaceholder:'Bijv. Trastevere, Rome',bioPlaceholder:'Beschrijf de artiest...',
+    titlePlaceholder:'Titel van de tentoonstelling',locationPlaceholder:'Bijv. Piazza della Rotonda, Rome',
+    geoSearching:'🔍 Locatie zoeken…',geoFound:'✅ Locatie gevonden!',geoCentered:'📍 Gecentreerd op uw locatie',
+    geoErr1:'Locatietoestemming geweigerd.',geoErr2:'Locatie niet beschikbaar.',geoErr3:'Timeout — probeer opnieuw.',geoNA:'GPS niet beschikbaar in deze browser',
+    emptyArtists:'Geen artiesten gevonden',emptyExhibitions:'Geen tentoonstellingen gevonden',
+  },
+  pl:{
+    subtitle:'Artyści uliczni, murale i sztuka na żywo w Wiecznym Mieście',
+    searchPlaceholder:'Szukaj artysty, pseudonimu lub dzielnicy...',
+    filters:'Filtry',tabArtists:'Artyści',tabExhibitions:'Wystawy',
+    viewMap:'Mapa',viewList:'Lista',addBtn:'Dodaj',
+    catAll:'Wszystkie',catMurales:'Murale',catStencil:'Szablon',catMusic:'Muzyka',
+    catSculpture:'Rzeźba',catDrawing:'Rysunek',catTheatre:'Teatr',catJuggling:'Żonglerka',catOther:'Inne',
+    footer:(a,e)=>`<strong>${a} artystów</strong> &nbsp;•&nbsp; <strong>${e} wystaw</strong> zaplanowanych`,
+    nearby:'W pobliżu',fromYou:'od ciebie',
+    profileTitle:'Profil artysty',bio:'Bio',performanceZones:'Strefy występów',
+    reviews:'Recenzje',leaveReview:'Zostaw recenzję',sendReview:'WYŚLIJ RECENZJĘ',
+    reviewPlaceholder:'Opisz swoje doświadczenia z tym artystą...',
+    socialIG:'Instagram',socialWeb:'Oficjalna strona',
+    addTitle:'Dodaj',addArtist:'Artysta',addExhibition:'Wystawa',
+    nameLabel:'Nazwa *',pseudoLabel:'Pseudonim artystyczny',zoneLabel:'Strefa *',bioLabel:'Bio',
+    titleLabel:'Tytuł *',dateLabel:'Data *',timeLabel:'Godzina',locationLabel:'Miejsce *',
+    catLabel:'Kategoria *',submitAdd:'DODAJ',
+    alertFillArtist:'Wypełnij nazwę, strefę i kategorię.',alertFillExh:'Wypełnij wszystkie wymagane pola.',
+    alertAddedArtist:(n)=>`✅ Artysta "${n}" dodany!`,alertAddedExh:(t)=>`✅ Wystawa "${t}" dodana!`,
+    alertReview:'Napisz recenzję i wybierz ocenę.',
+    free:'BEZPŁATNIE',see:'Zobacz →',youAreHere:'📍 Jesteś tutaj',
+    namePlaceholder:'Pełne imię i nazwisko',pseudoPlaceholder:'Pseudonim lub podpis artystyczny',
+    zonePlaceholder:'np. Trastevere, Rzym',bioPlaceholder:'Opisz artystę...',
+    titlePlaceholder:'Tytuł wystawy',locationPlaceholder:'np. Piazza della Rotonda, Rzym',
+    geoSearching:'🔍 Szukanie pozycji…',geoFound:'✅ Pozycja znaleziona!',geoCentered:'📍 Wyśrodkowano na twojej pozycji',
+    geoErr1:'Odmowa pozwolenia na lokalizację.',geoErr2:'Lokalizacja niedostępna.',geoErr3:'Przekroczono czas — spróbuj ponownie.',geoNA:'GPS niedostępny w tej przeglądarce',
+    emptyArtists:'Nie znaleziono artystów',emptyExhibitions:'Nie znaleziono wystaw',
+  },
+  ru:{
+    subtitle:'Уличные художники, фрески и живое искусство в Вечном городе',
+    searchPlaceholder:'Поиск по имени, псевдониму или кварталу...',
+    filters:'Фильтры',tabArtists:'Художники',tabExhibitions:'Выставки',
+    viewMap:'Карта',viewList:'Список',addBtn:'Добавить',
+    catAll:'Все',catMurales:'Фрески',catStencil:'Трафарет',catMusic:'Музыка',
+    catSculpture:'Скульптура',catDrawing:'Рисунок',catTheatre:'Театр',catJuggling:'Жонглирование',catOther:'Другое',
+    footer:(a,e)=>`<strong>${a} художников</strong> &nbsp;•&nbsp; <strong>${e} выставок</strong> запланировано`,
+    nearby:'Рядом',fromYou:'от вас',
+    profileTitle:'Профиль художника',bio:'Биография',performanceZones:'Зоны выступлений',
+    reviews:'Отзывы',leaveReview:'Оставить отзыв',sendReview:'ОТПРАВИТЬ ОТЗЫВ',
+    reviewPlaceholder:'Опишите свои впечатления от этого художника...',
+    socialIG:'Instagram',socialWeb:'Официальный сайт',
+    addTitle:'Добавить',addArtist:'Художник',addExhibition:'Выставка',
+    nameLabel:'Имя *',pseudoLabel:'Псевдоним',zoneLabel:'Район *',bioLabel:'Биография',
+    titleLabel:'Название *',dateLabel:'Дата *',timeLabel:'Время',locationLabel:'Место *',
+    catLabel:'Категория *',submitAdd:'ДОБАВИТЬ',
+    alertFillArtist:'Заполните имя, район и категорию.',alertFillExh:'Заполните все обязательные поля.',
+    alertAddedArtist:(n)=>`✅ Художник "${n}" добавлен!`,alertAddedExh:(t)=>`✅ Выставка "${t}" добавлена!`,
+    alertReview:'Напишите отзыв и выберите оценку.',
+    free:'БЕСПЛАТНО',see:'Смотреть →',youAreHere:'📍 Вы здесь',
+    namePlaceholder:'Полное имя',pseudoPlaceholder:'Псевдоним или художественная подпись',
+    zonePlaceholder:'Напр. Трастевере, Рим',bioPlaceholder:'Опишите художника...',
+    titlePlaceholder:'Название выставки',locationPlaceholder:'Напр. Пьяцца делла Ротонда, Рим',
+    geoSearching:'🔍 Поиск местоположения…',geoFound:'✅ Местоположение найдено!',geoCentered:'📍 Центрировано на вашей позиции',
+    geoErr1:'Разрешение на геолокацию отклонено.',geoErr2:'Местоположение недоступно.',geoErr3:'Таймаут — повторите попытку.',geoNA:'GPS недоступен в этом браузере',
+    emptyArtists:'Художники не найдены',emptyExhibitions:'Выставки не найдены',
+  },
+  zh:{
+    subtitle:'永恒之城的街头艺术家、壁画与现场艺术',
+    searchPlaceholder:'搜索艺术家、艺名或街区...',
+    filters:'筛选',tabArtists:'艺术家',tabExhibitions:'展览',
+    viewMap:'地图',viewList:'列表',addBtn:'添加',
+    catAll:'全部',catMurales:'壁画',catStencil:'模版艺术',catMusic:'音乐',
+    catSculpture:'雕塑',catDrawing:'绘画',catTheatre:'戏剧',catJuggling:'杂技',catOther:'其他',
+    footer:(a,e)=>`<strong>${a} 位艺术家</strong> &nbsp;•&nbsp; <strong>${e} 场展览</strong>已安排`,
+    nearby:'附近',fromYou:'距离你',
+    profileTitle:'艺术家简介',bio:'简介',performanceZones:'表演区域',
+    reviews:'评论',leaveReview:'发表评论',sendReview:'发送评论',
+    reviewPlaceholder:'描述您与该艺术家的体验...',
+    socialIG:'Instagram',socialWeb:'官方网站',
+    addTitle:'添加',addArtist:'艺术家',addExhibition:'展览',
+    nameLabel:'姓名 *',pseudoLabel:'艺名',zoneLabel:'区域 *',bioLabel:'简介',
+    titleLabel:'标题 *',dateLabel:'日期 *',timeLabel:'时间',locationLabel:'地点 *',
+    catLabel:'类别 *',submitAdd:'添加',
+    alertFillArtist:'请填写姓名、区域和类别。',alertFillExh:'请填写所有必填字段。',
+    alertAddedArtist:(n)=>`✅ 艺术家"${n}"已添加！`,alertAddedExh:(t)=>`✅ 展览"${t}"已添加！`,
+    alertReview:'请写下评论并选择评分。',
+    free:'免费',see:'查看 →',youAreHere:'📍 您在这里',
+    namePlaceholder:'全名',pseudoPlaceholder:'艺名或艺术签名',
+    zonePlaceholder:'例：Trastevere, 罗马',bioPlaceholder:'描述这位艺术家...',
+    titlePlaceholder:'展览标题',locationPlaceholder:'例：Piazza della Rotonda, 罗马',
+    geoSearching:'🔍 正在搜索位置…',geoFound:'✅ 已找到位置！',geoCentered:'📍 已定位到您的位置',
+    geoErr1:'位置权限被拒绝。',geoErr2:'位置不可用。',geoErr3:'超时 — 请重试。',geoNA:'此浏览器不支持GPS',
+    emptyArtists:'未找到艺术家',emptyExhibitions:'未找到展览',
+  },
+  ja:{
+    subtitle:'永遠の都のストリートアーティスト、壁画、ライブアート',
+    searchPlaceholder:'アーティスト、芸名、地区を検索...',
+    filters:'フィルター',tabArtists:'アーティスト',tabExhibitions:'展覧会',
+    viewMap:'地図',viewList:'リスト',addBtn:'追加',
+    catAll:'すべて',catMurales:'壁画',catStencil:'ステンシル',catMusic:'音楽',
+    catSculpture:'彫刻',catDrawing:'デッサン',catTheatre:'演劇',catJuggling:'ジャグリング',catOther:'その他',
+    footer:(a,e)=>`<strong>${a}人のアーティスト</strong> &nbsp;•&nbsp; <strong>${e}件の展覧会</strong>予定`,
+    nearby:'近く',fromYou:'あなたから',
+    profileTitle:'アーティストプロフィール',bio:'経歴',performanceZones:'パフォーマンスエリア',
+    reviews:'レビュー',leaveReview:'レビューを書く',sendReview:'レビューを送信',
+    reviewPlaceholder:'このアーティストとの体験を説明してください...',
+    socialIG:'Instagram',socialWeb:'公式サイト',
+    addTitle:'追加',addArtist:'アーティスト',addExhibition:'展覧会',
+    nameLabel:'名前 *',pseudoLabel:'芸名',zoneLabel:'エリア *',bioLabel:'経歴',
+    titleLabel:'タイトル *',dateLabel:'日付 *',timeLabel:'時間',locationLabel:'場所 *',
+    catLabel:'カテゴリー *',submitAdd:'追加する',
+    alertFillArtist:'名前、エリア、カテゴリーを入力してください。',alertFillExh:'すべての必須フィールドを入力してください。',
+    alertAddedArtist:(n)=>`✅ アーティスト「${n}」を追加しました！`,alertAddedExh:(t)=>`✅ 展覧会「${t}」を追加しました！`,
+    alertReview:'レビューを書いて評価を選択してください。',
+    free:'無料',see:'見る →',youAreHere:'📍 現在地',
+    namePlaceholder:'フルネーム',pseudoPlaceholder:'芸名またはサイン',
+    zonePlaceholder:'例：トラステヴェレ、ローマ',bioPlaceholder:'アーティストを説明してください...',
+    titlePlaceholder:'展覧会のタイトル',locationPlaceholder:'例：ピアッツァ・デッラ・ロトンダ、ローマ',
+    geoSearching:'🔍 位置を検索中…',geoFound:'✅ 位置が見つかりました！',geoCentered:'📍 現在地に中央揃え',
+    geoErr1:'位置情報の許可が拒否されました。',geoErr2:'位置情報が利用できません。',geoErr3:'タイムアウト — 再試行してください。',geoNA:'このブラウザではGPSが利用できません',
+    emptyArtists:'アーティストが見つかりません',emptyExhibitions:'展覧会が見つかりません',
+  },
+  ar:{
+    subtitle:'فنانو الشوارع واللوحات الجدارية والفن الحي في المدينة الأبدية',
+    searchPlaceholder:'ابحث عن فنان، لقب أو حي...',
+    filters:'تصفية',tabArtists:'الفنانون',tabExhibitions:'المعارض',
+    viewMap:'الخريطة',viewList:'القائمة',addBtn:'إضافة',
+    catAll:'الكل',catMurales:'جداريات',catStencil:'استنسل',catMusic:'موسيقى',
+    catSculpture:'نحت',catDrawing:'رسم',catTheatre:'مسرح',catJuggling:'بهلوانية',catOther:'أخرى',
+    footer:(a,e)=>`<strong>${a} فنان</strong> &nbsp;•&nbsp; <strong>${e} معرض</strong> مجدول`,
+    nearby:'قريب',fromYou:'منك',
+    profileTitle:'ملف الفنان',bio:'نبذة',performanceZones:'مناطق الأداء',
+    reviews:'التقييمات',leaveReview:'اترك تقييماً',sendReview:'إرسال التقييم',
+    reviewPlaceholder:'صف تجربتك مع هذا الفنان...',
+    socialIG:'انستغرام',socialWeb:'الموقع الرسمي',
+    addTitle:'إضافة',addArtist:'فنان',addExhibition:'معرض',
+    nameLabel:'الاسم *',pseudoLabel:'الاسم الفني',zoneLabel:'المنطقة *',bioLabel:'نبذة',
+    titleLabel:'العنوان *',dateLabel:'التاريخ *',timeLabel:'الوقت',locationLabel:'المكان *',
+    catLabel:'الفئة *',submitAdd:'إضافة',
+    alertFillArtist:'يرجى ملء الاسم والمنطقة والفئة.',alertFillExh:'يرجى ملء جميع الحقول المطلوبة.',
+    alertAddedArtist:(n)=>`✅ تمت إضافة الفنان "${n}"!`,alertAddedExh:(t)=>`✅ تمت إضافة المعرض "${t}"!`,
+    alertReview:'اكتب تقييماً واختر تقديراً.',
+    free:'مجاني',see:'عرض ←',youAreHere:'📍 أنت هنا',
+    namePlaceholder:'الاسم الكامل',pseudoPlaceholder:'الاسم المستعار أو التوقيع الفني',
+    zonePlaceholder:'مثال: تراستيفيري، روما',bioPlaceholder:'صف الفنان...',
+    titlePlaceholder:'عنوان المعرض',locationPlaceholder:'مثال: بياتسا ديلا روتوندا، روما',
+    geoSearching:'🔍 جاري البحث عن الموقع…',geoFound:'✅ تم العثور على الموقع!',geoCentered:'📍 تمركز على موقعك',
+    geoErr1:'تم رفض إذن الموقع.',geoErr2:'الموقع غير متاح.',geoErr3:'انتهت المهلة — حاول مجدداً.',geoNA:'GPS غير متاح في هذا المتصفح',
+    emptyArtists:'لم يتم العثور على فنانين',emptyExhibitions:'لم يتم العثور على معارض',
+  },
+};
+
+let currentLang='it';
+function t(key,...args){
+  const val=T[currentLang]?.[key]||T['en']?.[key]||key;
+  return typeof val==='function'?val(...args):val;
+}
+
+function toggleLangMenu(e){
+  e&&e.stopPropagation();
+  const portal=document.getElementById('langPortal');
+  const btn=document.getElementById('langBtn');
+  const isOpen=portal.classList.contains('open');
+  if(isOpen){portal.classList.remove('open');return;}
+  // Build full list every time
+  portal.innerHTML=LANGS.map(l=>`
+    <div class="lang-option ${l.code===currentLang?'active':''}" data-lang="${l.code}">
+      <span class="lang-flag">${l.flag}</span>
+      <span class="lang-label">${l.label}</span>
+      ${l.code===currentLang?'<span style="color:#7B2FBE;font-size:12px">✓</span>':''}
+    </div>`).join('');
+  portal.querySelectorAll('.lang-option').forEach(el=>{
+    el.addEventListener('click',ev=>{ev.stopPropagation();setLang(el.dataset.lang);});
+  });
+  // Position portal directly below the button using getBoundingClientRect
+  const r=btn.getBoundingClientRect();
+  portal.style.top=(r.bottom+6)+'px';
+  portal.style.right=(window.innerWidth-r.right)+'px';
+  portal.classList.add('open');
+}
+
+function setLang(code){
+  currentLang=code;
+  const lang=LANGS.find(l=>l.code===code);
+  document.getElementById('langBtn').textContent=`${lang.flag} ${code.toUpperCase()} ▾`;
+  document.getElementById('langPortal').classList.remove('open');
+  // RTL support for Arabic
+  document.body.style.direction=code==='ar'?'rtl':'ltr';
+  applyTranslations();
+}
+
+function applyTranslations(){
+  // Modal titles
+  const amt=document.getElementById('artistModalTitle');if(amt)amt.textContent=t('profileTitle');
+  const admt=document.getElementById('addModalTitle');if(admt)admt.textContent=t('addTitle');
+  const saBtn=document.getElementById('submitAddBtn');if(saBtn)saBtn.textContent=t('submitAdd');
+  document.getElementById('addTypeArtista').innerHTML=`👤 ${t('addArtist')}`;
+  document.getElementById('addTypeEsibizione').innerHTML=`📅 ${t('addExhibition')}`;
+  // Re-render artist modal if open (bio + reviews must change language)
+  const modal=document.getElementById('artistModal');
+  if(modal.classList.contains('show')){
+    const curId=modal.dataset.artistId;
+    if(curId) openArtistModal(curId);
+  }
+  // Header subtitle
+  document.getElementById('headerSub').textContent=t('subtitle');
+  // Search
+  document.getElementById('searchInput').placeholder=t('searchPlaceholder');
+  // Filter btn
+  document.querySelector('.filter-btn').innerHTML=`⚙️ ${t('filters')}`;
+  // Tabs
+  document.getElementById('tab-artisti').innerHTML=`👤 ${t('tabArtists')}`;
+  document.getElementById('tab-esibizioni').innerHTML=`📅 ${t('tabExhibitions')}`;
+  // View toggle
+  document.getElementById('view-mappa').innerHTML=`🗺️ ${t('viewMap')}`;
+  document.getElementById('view-lista').innerHTML=`☰ ${t('viewList')}`;
+  // Add btn
+  document.querySelector('.add-btn').innerHTML=`＋ ${t('addBtn')}`;
+  // Categories
+  renderCats();
+  // Footer
+  updateFooter();
+  // Re-render list if open
+  if(vMode==='lista') renderList();
+  // Locate btn title
+  document.getElementById('locateBtn').title=t('geoCentered');
+  // User marker popup
+  if(userMarker) userMarker.setPopupContent(`<b>${t('youAreHere')}</b>`);
+}
+
+// Close lang portal when clicking outside
+document.addEventListener('click',function(e){
+  const portal=document.getElementById('langPortal');
+  const btn=document.getElementById('langBtn');
+  if(portal&&!portal.contains(e.target)&&btn&&!btn.contains(e.target)){
+    portal.classList.remove('open');
+  }
+});
+
+const CATS=[
+  {id:'tutti',labelKey:'catAll',icon:'🎨',color:'#7B2FBE'},
+  {id:'murales',labelKey:'catMurales',icon:'🖌️',color:'#C94B22'},
+  {id:'stencil',labelKey:'catStencil',icon:'✂️',color:'#2E7BB4'},
+  {id:'musica',labelKey:'catMusic',icon:'🎵',color:'#E8A000'},
+  {id:'scultura',labelKey:'catSculpture',icon:'🗿',color:'#4A8C5C'},
+  {id:'disegno',labelKey:'catDrawing',icon:'✏️',color:'#D4467A'},
+  {id:'teatro',labelKey:'catTheatre',icon:'🎭',color:'#6366F1'},
+  {id:'giocoleria',labelKey:'catJuggling',icon:'🤹',color:'#F97316'},
+  {id:'altro',labelKey:'catOther',icon:'⭐',color:'#64748B'},
+];
+
+let ARTISTS=[
+  {id:'1',name:'Alice Pasquini',pseudo:'Alicè',category:'murales',
+   bio:{
+     it:'Artista visiva romana nata nel 1980, laureata all\'Accademia di Belle Arti di Roma con Master in critica d\'arte a Madrid. Una delle poche donne di spicco internazionale nella street art contemporanea. Le sue opere — presenti in oltre 100 città del mondo — raccontano emozioni femminili, relazioni umane e momenti sospesi, lontano dagli stereotipi. Ha esposto alla Saatchi Gallery di Londra, al MACRO di Roma e all\'Ambasciata USA. Nel 2023 ha ricevuto il titolo di Cavaliere al Merito della Patria.',
+     en:'Roman visual artist born in 1980, graduated from the Academy of Fine Arts in Rome with a Master\'s in art criticism in Madrid. One of the few internationally prominent women in contemporary street art. Her works — present in over 100 cities worldwide — portray feminine emotions, human relationships and suspended moments, far from stereotypes. She has exhibited at the Saatchi Gallery in London, MACRO in Rome, and the US Embassy. In 2023 she received the title of Knight of Merit of the Homeland.',
+     es:'Artista visual romana nacida en 1980, licenciada en la Academia de Bellas Artes de Roma con Máster en crítica de arte en Madrid. Una de las pocas mujeres de renombre internacional en el street art contemporáneo. Sus obras — presentes en más de 100 ciudades del mundo — narran emociones femeninas, relaciones humanas y momentos suspendidos. Expuso en la Saatchi Gallery de Londres, el MACRO de Roma y la Embajada de EE.UU.',
+     fr:'Artiste visuelle romaine née en 1980, diplômée de l\'Académie des Beaux-Arts de Rome avec un Master en critique d\'art à Madrid. L\'une des rares femmes de renommée internationale dans le street art contemporain. Ses œuvres — présentes dans plus de 100 villes dans le monde — racontent des émotions féminines, des relations humaines et des moments suspendus.',
+     de:'Römische Bildkünstlerin, geboren 1980, mit Abschluss an der Akademie der Schönen Künste in Rom und Master in Kunstkritik in Madrid. Eine der wenigen international anerkannten Frauen in der zeitgenössischen Street Art. Ihre Werke — in über 100 Städten weltweit — erzählen von weiblichen Gefühlen, menschlichen Beziehungen und schwebenden Momenten.',
+     pt:'Artista visual romana nascida em 1980, formada na Academia de Belas-Artes de Roma com Mestrado em crítica de arte em Madrid. Uma das poucas mulheres de destaque internacional na street art contemporânea. As suas obras — presentes em mais de 100 cidades do mundo — narram emoções femininas, relações humanas e momentos suspensos.',
+     nl:'Romeinse beeldend kunstenaar geboren in 1980, afgestudeerd aan de Academie voor Schone Kunsten in Rome met een Master kunstkritiek in Madrid. Een van de weinige internationaal prominente vrouwen in de hedendaagse street art. Haar werken — aanwezig in meer dan 100 steden wereldwijd — vertellen over vrouwelijke emoties en menselijke relaties.',
+     pl:'Rzymska artystka wizualna urodzona w 1980 r., absolwentka Akademii Sztuk Pięknych w Rzymie z tytułem magistra krytyki artystycznej w Madrycie. Jedna z niewielu kobiet o międzynarodowej renomie w street arcie. Jej prace — obecne w ponad 100 miastach na świecie — opowiadają o kobiecych emocjach i relacjach międzyludzkich.',
+     ru:'Римская художница, родившаяся в 1980 году. Окончила Академию изящных искусств в Риме, магистр искусствоведения в Мадриде. Одна из немногих женщин с международным признанием в современном стрит-арте. Её работы — в более чем 100 городах мира — рассказывают о женских эмоциях и человеческих отношениях.',
+     zh:'1980年出生的罗马视觉艺术家，毕业于罗马美术学院，并在马德里获得艺术评论硕士学位。当代街头艺术中少数具有国际知名度的女性之一。她的作品遍布全球100多个城市，描绘女性情感、人际关系和悬停时刻，远离刻板印象。',
+     ja:'1980年生まれのローマ出身ビジュアルアーティスト。ローマ美術アカデミー卒業後、マドリードで美術評論の修士号を取得。現代ストリートアートで国際的に知名度の高い数少ない女性アーティストの一人。世界100都市以上で作品を展示し、女性の感情や人間関係を表現。',
+     ar:'فنانة بصرية رومانية ولدت عام 1980، تخرجت من أكاديمية الفنون الجميلة في روما مع ماجستير في نقد الفن بمدريد. إحدى النساء القليلات ذوات الشهرة الدولية في فن الشوارع المعاصر. أعمالها موجودة في أكثر من 100 مدينة حول العالم.',
+   },
+   rating:4.9,reviews:312,lat:41.8845,lng:12.5110,city:'Roma',zone:'Quadraro / Torpignattara',
+   performances:['Quadraro','Casalbertone','San Lorenzo','Testaccio'],
+   instagram:'https://www.instagram.com/alicepasquini/',website:'https://www.alicepasquini.com',igHandle:'@alicepasquini',
+   reviews_data:[
+     {author:'Valentina R.',rating:5,
+      text:{it:'Ho visto il suo murale al Quadraro dal vivo: le donne che dipinge sembrano respirare. Un\'artista che trasforma quartieri interi in gallerie a cielo aperto.',en:'I saw her mural at Quadraro live: the women she paints seem to breathe. An artist who transforms entire neighbourhoods into open-air galleries.',es:'Vi su mural en Quadraro en persona: las mujeres que pinta parecen respirar. Una artista que transforma barrios enteros en galerías al aire libre.',fr:'J\'ai vu sa fresque au Quadraro en vrai : les femmes qu\'elle peint semblent respirer. Une artiste qui transforme des quartiers entiers en galeries à ciel ouvert.',de:'Ich habe ihr Wandbild im Quadraro live gesehen: Die Frauen, die sie malt, scheinen zu atmen. Eine Künstlerin, die ganze Viertel in Freiluftgalerien verwandelt.',pt:'Vi o seu mural no Quadraro ao vivo: as mulheres que pinta parecem respirar. Uma artista que transforma bairros inteiros em galerias a céu aberto.',nl:'Ik zag haar muurschildering in Quadraro live: de vrouwen die ze schildert lijken te ademen.',pl:'Widziałem jej mural w Quadraro na żywo: kobiety, które maluje, wydają się oddychać.',ru:'Я видел её мурал в Квадраро вживую: женщины, которых она рисует, словно дышат.',zh:'我亲眼见过她在Quadraro的壁画：她画的女人仿佛在呼吸。',ja:'クアドラーロで彼女の壁画を実際に見ました。描かれた女性たちが呼吸しているようです。',ar:'رأيت جداريتها في كوادرارو شخصياً: النساء اللواتي ترسمهن يبدو أنهن يتنفسن.'},
+      date:'3 giorni fa'},
+     {author:'Marco T.',rating:5,
+      text:{it:'Seguo il suo lavoro da anni su Instagram. La mostra al MACRO è stata una delle più belle che ho visto a Roma. Merita ogni riconoscimento.',en:'I\'ve been following her work for years on Instagram. The exhibition at MACRO was one of the most beautiful I\'ve seen in Rome. She deserves every recognition.',es:'Sigo su trabajo desde hace años en Instagram. La exposición en el MACRO fue una de las más bonitas que he visto en Roma.',fr:'Je suis son travail depuis des années sur Instagram. L\'exposition au MACRO était l\'une des plus belles que j\'ai vues à Rome.',de:'Ich verfolge ihre Arbeit seit Jahren auf Instagram. Die Ausstellung im MACRO war eine der schönsten, die ich in Rom gesehen habe.',pt:'Sigo o seu trabalho há anos no Instagram. A exposição no MACRO foi uma das mais bonitas que vi em Roma.',nl:'Ik volg haar werk al jaren op Instagram. De tentoonstelling in MACRO was een van de mooiste die ik in Rome heb gezien.',pl:'Śledzę jej pracę od lat na Instagramie. Wystawa w MACRO była jedną z najpiękniejszych, jakie widziałem w Rzymie.',ru:'Я слежу за её работой уже много лет в Instagram. Выставка в MACRO была одной из лучших, что я видел в Риме.',zh:'我在Instagram上关注她的作品已经多年了。她在MACRO的展览是我在罗马见过最美的展览之一。',ja:'Instagramで長年彼女の作品をフォローしています。MACROでの展覧会はローマで見た中で最も美しいものの一つでした。',ar:'أتابع عملها منذ سنوات على انستغرام. كان المعرض في ماكرو من أجمل ما رأيت في روما.'},
+      date:'2 settimane fa'},
+   ]},
+  {id:'2',name:'Sten & Lex',pseudo:'Sten Lex',category:'stencil',
+   bio:{
+     it:'Duo artistico formato da Sten (Roma, 1982) e Lex (Taranto, 1982), pionieri dello stencil graffiti in Italia. Dal 2001 hanno inventato la tecnica dello "Stencil Poster": incollano un poster gigante sul muro, ritagliano come uno stencil, dipingono e poi distruggono la matrice — lasciando che il tempo sveli l\'opera finale. Nel 2008 Banksy li ha invitati al suo Cans Festival di Londra.',
+     en:'Artistic duo formed by Sten (Rome, 1982) and Lex (Taranto, 1982), pioneers of stencil graffiti in Italy. Since 2001 they invented the "Stencil Poster" technique: they paste a giant poster on the wall, cut it like a stencil, paint and then destroy the matrix — letting time slowly reveal the final work. In 2008 Banksy invited them to his Cans Festival in London.',
+     es:'Dúo artístico formado por Sten (Roma, 1982) y Lex (Taranto, 1982), pioneros del graffiti de plantilla en Italia. Desde 2001 inventaron la técnica del "Stencil Poster": pegan un cartel gigante en la pared, lo recortan como una plantilla, pintan y luego destruyen la matriz.',
+     fr:'Duo artistique formé par Sten (Rome, 1982) et Lex (Tarente, 1982), pionniers du stencil graffiti en Italie. Depuis 2001, ils ont inventé la technique du "Stencil Poster" : ils collent une affiche géante sur le mur, la découpent comme un pochoir, peignent puis détruisent la matrice.',
+     de:'Künstlerduo aus Sten (Rom, 1982) und Lex (Tarent, 1982), Pioniere des Stencil-Graffitis in Italien. Seit 2001 haben sie die "Stencil Poster"-Technik erfunden: Sie kleben ein riesiges Poster an die Wand, schneiden es wie eine Schablone aus, malen und zerstören dann die Vorlage.',
+     pt:'Duo artístico formado por Sten (Roma, 1982) e Lex (Taranto, 1982), pioneiros do stencil graffiti em Itália. Desde 2001 inventaram a técnica do "Stencil Poster": colam um cartaz gigante na parede, recortam como um stencil, pintam e depois destroem a matriz.',
+     nl:'Artistiek duo gevormd door Sten (Rome, 1982) en Lex (Taranto, 1982), pioniers van stencilgraffiti in Italië. Sinds 2001 hebben ze de "Stencil Poster"-techniek uitgevonden.',
+     pl:'Duet artystyczny złożony ze Stena (Rzym, 1982) i Lexa (Taranto, 1982), pionierów graffiti szablonowego we Włoszech. Od 2001 roku wynaleźli technikę "Stencil Poster".',
+     ru:'Творческий дуэт из Стена (Рим, 1982) и Лекса (Таранто, 1982), пионеров трафаретного граффити в Италии. С 2001 года они изобрели технику "Stencil Poster".',
+     zh:'由Sten（罗马，1982年）和Lex（塔兰托，1982年）组成的艺术二人组，是意大利模板涂鸦的先驱。自2001年起发明了"模板海报"技术。',
+     ja:'ステン（ローマ、1982年）とレックス（タラント、1982年）によるアーティストデュオ。イタリアのステンシルグラフィティのパイオニア。2001年から「ステンシルポスター」技法を発明。',
+     ar:'ثنائي فني مكون من ستن (روما، 1982) وليكس (تارانتو، 1982)، رواد الغرافيتي بالاستنسيل في إيطاليا. منذ 2001 ابتكرا تقنية "ملصق الاستنسيل".',
+   },
+   rating:4.8,reviews:198,lat:41.8680,lng:12.4948,city:'Roma',zone:'Ostiense / Pigneto',
+   performances:['Via delle Conce 14, Ostiense','Via F. Baracca, Torpignattara','Stazione Ostiense','Garbatella'],
+   instagram:'https://www.instagram.com/sten.lex/',website:'https://stenlex.com',igHandle:'@sten.lex',
+   reviews_data:[
+     {author:'Federico B.',rating:5,
+      text:{it:'Il ritratto anonimo in via delle Conce è una delle opere più potenti di Roma. La tecnica dello stencil poster è un\'invenzione geniale: guardi e senti che l\'opera vive.',en:'The anonymous portrait on via delle Conce is one of the most powerful works in Rome. The stencil poster technique is a brilliant invention: you look and feel that the work is alive.',es:'El retrato anónimo en via delle Conce es una de las obras más poderosas de Roma. La técnica del stencil poster es una invención brillante.',fr:'Le portrait anonyme de via delle Conce est l\'une des œuvres les plus puissantes de Rome. La technique du stencil poster est une invention géniale.',de:'Das anonyme Porträt in der via delle Conce ist eines der kraftvollsten Werke Roms. Die Stencil-Poster-Technik ist eine geniale Erfindung.',pt:'O retrato anónimo na via delle Conce é uma das obras mais poderosas de Roma.',nl:'Het anonieme portret op via delle Conce is een van de krachtigste werken van Rome.',pl:'Anonimowy portret przy via delle Conce jest jednym z najpotężniejszych dzieł Rzymu.',ru:'Анонимный портрет на via delle Conce — одна из самых мощных работ Рима.',zh:'Via delle Conce的匿名肖像是罗马最有力的作品之一。',ja:'ヴィア・デッレ・コンチェの匿名の肖像はローマで最も力強い作品の一つです。',ar:'البورتريه المجهول في via delle Conce هو أحد أقوى الأعمال في روما.'},
+      date:'1 settimana fa'},
+     {author:'Carla M.',rating:4,
+      text:{it:'Ho fatto il tour street art ad Ostiense appositamente per i loro murales. Ogni opera è un dialogo tra tempo, carta e muro. Vale ogni secondo.',en:'I did the street art tour in Ostiense specifically for their murals. Each work is a dialogue between time, paper and wall. Worth every second.',es:'Hice el tour de street art en Ostiense específicamente para ver sus murales. Cada obra es un diálogo entre el tiempo, el papel y la pared.',fr:'J\'ai fait le tour street art à Ostiense spécialement pour leurs fresques. Chaque œuvre est un dialogue entre le temps, le papier et le mur.',de:'Ich habe die Street-Art-Tour in Ostiense extra für ihre Wandbilder gemacht. Jedes Werk ist ein Dialog zwischen Zeit, Papier und Wand.',pt:'Fiz o tour de street art em Ostiense especialmente para os seus murais.',nl:'Ik deed de street art tour in Ostiense speciaal voor hun muurschilderingen.',pl:'Zrobiłam wycieczkę street art w Ostiense specjalnie dla ich murali.',ru:'Я специально отправилась на экскурсию по стрит-арту в Остиенсе ради их работ.',zh:'我专门为了他们的壁画去Ostiense参观了街头艺术之旅。',ja:'オスティエンセのストリートアートツアーを彼らの壁画のために行いました。',ar:'قمت بجولة street art في أوستيينسي خصيصاً لمشاهدة أعمالهم.'},
+      date:'1 mese fa'},
+   ]},
+  {id:'3',name:'Luca Vollono',pseudo:'Lucamaleonte',category:'murales',
+   bio:{
+     it:'Nato a Roma il 30 settembre 1983, laureato all\'Istituto Centrale per il Restauro. Attivo nella street art dal 2001, si distingue per uno stile che fonde illustrazione botanica, arte etrusca e bestiari medievali. Nel 2008 è stato tra i pochi italiani invitati da Banksy al Cans Festival di Londra. Tra i suoi murales celebri a Roma: il ritratto di Francesco Totti (Scuola Pascoli, Appio-Latino) e il murale per Gigi Proietti al Tufello.',
+     en:'Born in Rome on 30 September 1983, graduated from the Central Institute for Restoration. Active in street art since 2001, he stands out for a style blending botanical illustration, Etruscan art and medieval bestiaries. In 2008 he was among the few Italians invited by Banksy to his Cans Festival in London.',
+     es:'Nacido en Roma el 30 de septiembre de 1983, licenciado en el Instituto Central de Restauración. Activo en el street art desde 2001, destaca por un estilo que fusiona ilustración botánica, arte etrusco y bestiarios medievales.',
+     fr:'Né à Rome le 30 septembre 1983, diplômé de l\'Institut Central de Restauration. Actif dans le street art depuis 2001, il se distingue par un style mêlant illustration botanique, art étrusque et bestiaires médiévaux.',
+     de:'Geboren in Rom am 30. September 1983, Abschluss am Zentralinstitut für Restaurierung. Seit 2001 in der Street Art aktiv, zeichnet er sich durch einen Stil aus, der botanische Illustration, etruskische Kunst und mittelalterliche Bestiare verbindet.',
+     pt:'Nascido em Roma a 30 de setembro de 1983, formado no Instituto Central de Restauro. Ativo no street art desde 2001, destaca-se por um estilo que combina ilustração botânica, arte etrusca e bestiários medievais.',
+     nl:'Geboren in Rome op 30 september 1983, afgestudeerd aan het Centraal Instituut voor Restauratie. Actief in street art sinds 2001.',
+     pl:'Urodzony w Rzymie 30 września 1983 r., absolwent Centralnego Instytutu Restauracji. Aktywny w street arcie od 2001 r.',
+     ru:'Родился в Риме 30 сентября 1983 года. Окончил Центральный институт реставрации. Занимается стрит-артом с 2001 года.',
+     zh:'1983年9月30日出生于罗马，毕业于中央修复学院。自2001年起活跃于街头艺术，以融合植物插图、伊特鲁里亚艺术和中世纪兽形图鉴的风格著称。',
+     ja:'1983年9月30日ローマ生まれ。中央修復研究所卒業。2001年からストリートアートで活躍し、植物画、エトルリア美術、中世動物寓意集を融合したスタイルが特徴。',
+     ar:'وُلد في روما في 30 سبتمبر 1983، تخرج من المعهد المركزي للترميم. نشط في فن الشوارع منذ 2001.',
+   },
+   rating:4.7,reviews:145,lat:41.8869,lng:12.5183,city:'Roma',zone:'San Lorenzo / Appio-Latino',
+   performances:['San Lorenzo','Quadraro','Appio-Latino (Scuola Pascoli)','Tufello'],
+   instagram:'https://www.instagram.com/lucamaleonte/',website:null,igHandle:'@lucamaleonte',
+   reviews_data:[
+     {author:'Simone A.',rating:5,
+      text:{it:'Il murale di Totti alla scuola Pascoli è iconico. Riesce a catturare l\'eroismo popolare con tratti classici, come un affresco romano contemporaneo.',en:'The Totti mural at the Pascoli school is iconic. It captures popular heroism with classical traits, like a contemporary Roman fresco.',es:'El mural de Totti en la escuela Pascoli es icónico. Logra capturar el heroísmo popular con rasgos clásicos, como un fresco romano contemporáneo.',fr:'La fresque de Totti à l\'école Pascoli est iconique. Elle capture l\'héroïsme populaire avec des traits classiques, comme une fresque romaine contemporaine.',de:'Das Totti-Wandbild an der Pascoli-Schule ist ikonisch. Es fängt volkstümlichen Heroismus mit klassischen Zügen ein, wie ein zeitgenössisches römisches Fresko.',pt:'O mural do Totti na escola Pascoli é icónico. Consegue capturar o heroísmo popular com traços clássicos.',nl:'Het Totti-muurschildering bij de Pascoli-school is iconisch.',pl:'Mural Tottiego przy szkole Pascoli jest ikoniczny.',ru:'Мурал с Тотти в школе Паскали — культовый.',zh:'Pascoli学校的托蒂壁画是标志性的，用古典笔触捕捉了民间英雄主义。',ja:'パスコーリ学校のトッティの壁画は象徴的です。古典的な筆致で民衆の英雄主義を捉えています。',ar:'جدارية توتي في مدرسة باسكولي أيقونية. يلتقط البطولة الشعبية بملامح كلاسيكية.'},
+      date:'4 giorni fa'},
+     {author:'Elena V.',rating:4,
+      text:{it:'"Patrimonio Indigeno" a San Lorenzo è un viaggio nella storia del quartiere. Si vede che conosce profondamente la città — non solo l\'arte.',en:'"Patrimonio Indigeno" in San Lorenzo is a journey through the history of the neighbourhood. You can tell he knows the city deeply — not just the art.',es:'"Patrimonio Indigeno" en San Lorenzo es un viaje por la historia del barrio. Se nota que conoce profundamente la ciudad, no solo el arte.',fr:'"Patrimonio Indigeno" à San Lorenzo est un voyage dans l\'histoire du quartier. On voit qu\'il connaît profondément la ville.',de:'"Patrimonio Indigeno" in San Lorenzo ist eine Reise durch die Geschichte des Viertels.',pt:'"Patrimonio Indigeno" em San Lorenzo é uma viagem pela história do bairro.',nl:'"Patrimonio Indigeno" in San Lorenzo is een reis door de geschiedenis van de wijk.',pl:'"Patrimonio Indigeno" w San Lorenzo to podróż przez historię dzielnicy.',ru:'"Patrimonio Indigeno" в Сан-Лоренцо — путешествие по истории района.',zh:'"Patrimonio Indigeno"在San Lorenzo是一次穿越街区历史的旅程。',ja:'サン・ロレンツォの「Patrimonio Indigeno」は地区の歴史を旅するようです。',ar:'"باتريمونيو إنديجينو" في سان لورنتسو رحلة في تاريخ الحي.'},
+      date:'3 settimane fa'},
+   ]},
+  {id:'4',name:'Federico',pseudo:'Federico dei Fori',category:'musica',
+   bio:{
+     it:'Musicista di strada che si esibisce quotidianamente lungo via dei Fori Imperiali — uno dei palcoscenici naturali più suggestivi al mondo. Chitarra e amplificatore, di fronte alle rovine dell\'antica Roma. "Suonare per strada è divertente perché sei libero, autonomo e indipendente, fai quello che vuoi quando vuoi." È necessario un permesso annuale (gratuito) per esibirsi nella zona.',
+     en:'Street musician who performs daily along via dei Fori Imperiali — one of the most evocative natural stages in the world. Guitar and amplifier, facing the ruins of ancient Rome. "Playing on the street is fun because you are free, autonomous and independent, you do what you want when you want." An annual (free) permit is required to perform in the area.',
+     es:'Músico callejero que actúa diariamente en la via dei Fori Imperiali — uno de los escenarios naturales más sugestivos del mundo. Guitarra y amplificador, frente a las ruinas de la antigua Roma.',
+     fr:'Musicien de rue qui se produit quotidiennement le long de la via dei Fori Imperiali — l\'une des scènes naturelles les plus évocatrices du monde. Guitare et amplificateur, face aux ruines de la Rome antique.',
+     de:'Straßenmusiker, der täglich entlang der via dei Fori Imperiali auftritt — einer der stimmungsvollsten natürlichen Bühnen der Welt. Gitarre und Verstärker, gegenüber den Ruinen des antiken Roms.',
+     pt:'Músico de rua que actua diariamente ao longo da via dei Fori Imperiali — um dos palcos naturais mais sugestivos do mundo.',
+     nl:'Straatmuzikant die dagelijks optreedt langs de via dei Fori Imperiali — een van de meest suggestieve natuurlijke podia ter wereld.',
+     pl:'Muzyk uliczny występujący codziennie wzdłuż via dei Fori Imperiali — jednej z najbardziej sugestywnych naturalnych scen na świecie.',
+     ru:'Уличный музыкант, ежедневно выступающий вдоль via dei Fori Imperiali — одной из самых впечатляющих природных сцен в мире.',
+     zh:'每天在古罗马广场路表演的街头音乐家——世界上最令人印象深刻的天然舞台之一。吉他与扩音器，面对古罗马的废墟。',
+     ja:'毎日フォロ・インペリアーリ通りで演奏するストリートミュージシャン。ギターとアンプを持ち、古代ローマの遺跡を前に演奏する。',
+     ar:'موسيقي شارع يعزف يومياً على طول via dei Fori Imperiali — أحد أكثر المسارح الطبيعية إثارةً في العالم.',
+   },
+   rating:4.6,reviews:89,lat:41.8921,lng:12.4916,city:'Roma',zone:'Fori Imperiali',
+   performances:['Via dei Fori Imperiali','Piazza Venezia'],
+   instagram:null,website:null,igHandle:null,
+   reviews_data:[
+     {author:'Turista da Berlino',rating:5,
+      text:{it:'Chitarra acustica con il Colosseo sullo sfondo al tramonto. È stata l\'esperienza più bella del mio viaggio a Roma. Musica vera, senza filtri.',en:'Acoustic guitar with the Colosseum in the background at sunset. It was the most beautiful experience of my trip to Rome. Real music, unfiltered.',es:'Guitarra acústica con el Coliseo de fondo al atardecer. Fue la experiencia más bonita de mi viaje a Roma. Música real, sin filtros.',fr:'Guitare acoustique avec le Colisée en arrière-plan au coucher du soleil. C\'était la plus belle expérience de mon voyage à Rome.',de:'Akustikgitarre mit dem Kolosseum im Hintergrund bei Sonnenuntergang. Es war das schönste Erlebnis meiner Romreise.',pt:'Guitarra acústica com o Coliseu ao fundo ao pôr do sol. Foi a experiência mais bonita da minha viagem a Roma.',nl:'Akoestische gitaar met het Colosseum op de achtergrond bij zonsondergang.',pl:'Gitara akustyczna z Koloseum w tle o zachodzie słońca. To było najpiękniejsze przeżycie mojej podróży do Rzymu.',ru:'Акустическая гитара на фоне Колизея на закате. Это было лучшее впечатление от поездки в Рим.',zh:'夕阳下以斗兽场为背景的原声吉他演奏。这是我罗马之行中最美丽的体验。',ja:'夕暮れ時のコロッセオを背景にしたアコースティックギター。ローマ旅行で最も美しい体験でした。',ar:'غيتار أكوستيك مع الكولوسيوم في الخلفية عند غروب الشمس. كانت أجمل تجربة في رحلتي إلى روما.'},
+      date:'5 giorni fa'},
+     {author:'Giulia P.',rating:4,
+      text:{it:'Lo vedo spesso al mattino. La sua musica accompagna la passeggiata ai Fori in modo perfetto — malinconica e intensa.',en:'I see him often in the morning. His music perfectly accompanies the walk to the Forum — melancholic and intense.',es:'Lo veo a menudo por la mañana. Su música acompaña perfectamente el paseo por los Foros — melancólica e intensa.',fr:'Je le vois souvent le matin. Sa musique accompagne parfaitement la promenade aux Forums — mélancolique et intense.',de:'Ich sehe ihn oft morgens. Seine Musik begleitet den Spaziergang zum Forum perfekt — melancholisch und intensiv.',pt:'Vejo-o frequentemente de manhã. A sua música acompanha perfeitamente o passeio pelos Fóruns.',nl:'Ik zie hem vaak \'s ochtends. Zijn muziek begeleidt de wandeling naar het Forum perfect.',pl:'Widzę go często rano. Jego muzyka idealnie towarzyszy spacerowi po Forum.',ru:'Я часто вижу его по утрам. Его музыка идеально сопровождает прогулку по Форуму.',zh:'我早上经常看到他。他的音乐完美地伴随着在古罗马广场的散步——忧郁而深沉。',ja:'朝よく見かけます。彼の音楽はフォルムへの散歩を完璧に彩ります—憂鬱で力強い。',ar:'أراه كثيراً في الصباح. موسيقاه ترافق المشي في المنتدى بشكل مثالي.'},
+      date:'2 settimane fa'},
+   ]},
+  {id:'5',name:'Giuseppe',pseudo:'Giuseppe & Lillo',category:'musica',
+   bio:{
+     it:'Musicista con il suo fedele cane Lillo, che riposa sulla custodia della chitarra elettrica durante ogni esibizione ai Fori Imperiali. Suona ogni giorno evitando la fascia 13:00-16:00 (vietata in quella zona). "Questo è il luogo migliore dove suonare — qui ci sono più turisti e spazi sempre decenti." La sua storia racconta la libertà e la precarietà dell\'arte di strada.',
+     en:'Musician with his faithful dog Lillo, who rests on the electric guitar case during every performance at the Fori Imperiali. He plays every day avoiding the 13:00-16:00 slot (prohibited in that area). "This is the best place to play — here there are more tourists and decent spaces always." His story tells of the freedom and precariousness of street art.',
+     es:'Músico con su fiel perro Lillo, que descansa sobre el estuche de la guitarra eléctrica durante cada actuación en los Foros Imperiales. Toca cada día evitando el horario de 13:00 a 16:00 (prohibido en esa zona).',
+     fr:'Musicien avec son fidèle chien Lillo, qui se repose sur l\'étui de guitare électrique pendant chaque représentation aux Forums Impériaux. Il joue chaque jour en évitant la tranche 13h-16h (interdite dans cette zone).',
+     de:'Musiker mit seinem treuen Hund Lillo, der bei jeder Vorstellung an den Kaiserforen auf dem E-Gitarrenkoffer ruht. Er spielt jeden Tag und meidet die Zeitspanne 13-16 Uhr (in diesem Bereich verboten).',
+     pt:'Músico com o seu fiel cão Lillo, que descansa na caixa da guitarra eléctrica durante cada actuação nos Foros Imperiais.',
+     nl:'Muzikant met zijn trouwe hond Lillo, die tijdens elke voorstelling op de gitaarkoffer rust.',
+     pl:'Muzyk z wiernym psem Lillo, który odpoczywa na futerale gitary elektrycznej podczas każdego występu.',
+     ru:'Музыкант с верным псом Лилло, который отдыхает на чехле электрогитары во время каждого выступления.',
+     zh:'音乐家和他忠实的狗Lillo，Lillo在古罗马广场每次表演时都躺在电吉他盒上休息。',
+     ja:'フォロ・インペリアーレでの毎回の演奏中、エレキギターのケースの上で休んでいる忠実な犬Lilloと一緒のミュージシャン。',
+     ar:'موسيقي مع كلبه الوفي ليلو، الذي يستريح على حقيبة الغيتار الكهربائي خلال كل عرض.',
+   },
+   rating:4.5,reviews:67,lat:41.8924,lng:12.4890,city:'Roma',zone:'Fori Imperiali',
+   performances:['Via dei Fori Imperiali'],
+   instagram:null,website:null,igHandle:null,
+   reviews_data:[
+     {author:'Anna L.',rating:5,
+      text:{it:'Il cagnolino Lillo è adorabile! Lui e Giuseppe sono diventati una piccola istituzione dei Fori. Musica autentica, il tipo che ti fa fermare senza volerlo.',en:'Little Lillo is adorable! He and Giuseppe have become a little institution of the Forum. Authentic music, the kind that makes you stop without meaning to.',es:'¡El pequeño Lillo es adorable! Él y Giuseppe se han convertido en una pequeña institución de los Foros. Música auténtica.',fr:'Le petit Lillo est adorable ! Lui et Giuseppe sont devenus une petite institution des Forums. Musique authentique.',de:'Der kleine Lillo ist entzückend! Er und Giuseppe sind zu einer kleinen Institution des Forums geworden.',pt:'O pequeno Lillo é adorável! Ele e Giuseppe tornaram-se uma pequena instituição dos Fóruns.',nl:'De kleine Lillo is schattig! Hij en Giuseppe zijn een kleine instelling van het Forum geworden.',pl:'Mały Lillo jest adorowalny! On i Giuseppe stali się małą instytucją Forum.',ru:'Маленький Лилло восхитителен! Он и Джузеппе стали маленькой институцией Форума.',zh:'小Lillo真可爱！他和Giuseppe已经成为古罗马广场的一个小小传奇。',ja:'リッロちゃんは可愛いです！彼とジュゼッペはフォルムの小さな名物になっています。',ar:'الكلب الصغير ليلو رائع! هو وجوزيبي أصبحا مؤسسة صغيرة في المنتدى.'},
+      date:'1 settimana fa'},
+     {author:'Marco F.',rating:4,
+      text:{it:'Ho lasciato un\'offerta con piacere. Si vede che suona per passione vera — non solo per guadagnare. Ha una sensibilità rara.',en:'I left a donation gladly. You can tell he plays out of true passion — not just to earn money. He has a rare sensitivity.',es:'Dejé una donación con mucho gusto. Se nota que toca por verdadera pasión, no solo para ganar dinero.',fr:'J\'ai laissé une offrande avec plaisir. On voit qu\'il joue par vraie passion — pas seulement pour gagner de l\'argent.',de:'Ich habe gerne eine Spende hinterlassen. Man sieht, dass er aus echter Leidenschaft spielt.',pt:'Deixei uma esmola com prazer. Nota-se que toca por verdadeira paixão.',nl:'Ik liet graag een donatie achter. Je kunt zien dat hij speelt vanuit echte passie.',pl:'Zostawiłem datek z przyjemnością. Widać, że gra z prawdziwej pasji.',ru:'Я с удовольствием оставил пожертвование. Видно, что он играет из настоящей страсти.',zh:'我很愿意留下捐款。可以看出他是出于真正的热情在演奏，而不仅仅是为了赚钱。',ja:'喜んで寄付しました。本当の情熱から演奏しているのが伝わります。',ar:'تركت تبرعاً بكل سرور. يُرى أنه يعزف بشغف حقيقي.'},
+      date:'3 settimane fa'},
+   ]},
+  {id:'6',name:'Jorit Agoch',pseudo:'Jorit',category:'murales',
+   bio:{
+     it:'Nato a Napoli nel 1990 da padre italiano e madre olandese, è uno dei muralisti più famosi d\'Italia. Le guance dei suoi soggetti portano sempre due strisce rosse tribali, simbolo dell\'unità della "Human Tribe". A Roma: il ritratto di Luana D\'Orazio (operaia morta sul lavoro a 22 anni) all\'Ex Snia Viscosa. Le sue opere monumentali ritraggono Maradona, Pasolini, Ilaria Cucchi e molti altri.',
+     en:'Born in Naples in 1990 to an Italian father and a Dutch mother, he is one of the most famous muralists in Italy. The cheeks of his subjects always bear two red tribal stripes, a symbol of the unity of the "Human Tribe". In Rome: the portrait of Luana D\'Orazio (a worker who died on the job at 22) at the Ex Snia Viscosa.',
+     es:'Nacido en Nápoles en 1990 de padre italiano y madre holandesa, es uno de los muralistas más famosos de Italia. Las mejillas de sus sujetos siempre llevan dos rayas rojas tribales, símbolo de la unidad de la "Tribu Humana".',
+     fr:'Né à Naples en 1990 d\'un père italien et d\'une mère néerlandaise, il est l\'un des muralistes les plus célèbres d\'Italie. Les joues de ses sujets portent toujours deux rayures rouges tribales, symbole de l\'unité de la "Tribu Humaine".',
+     de:'1990 in Neapel geboren, Sohn eines Italieners und einer Niederländerin, ist er einer der bekanntesten Wandmaler Italiens. Die Wangen seiner Motive tragen immer zwei rote Stammesstreifen, Symbol der Einheit des "Human Tribe".',
+     pt:'Nascido em Nápoles em 1990 de pai italiano e mãe holandesa, é um dos muralistas mais famosos de Itália. As bochechas dos seus sujeitos têm sempre duas listras vermelhas tribais.',
+     nl:'Geboren in Napels in 1990 uit een Italiaanse vader en een Nederlandse moeder, is hij een van de beroemdste muurschilders van Italië.',
+     pl:'Urodzony w Neapolu w 1990 r., syn Włocha i Holenderki, jeden z najsłynniejszych muralistów Włoch.',
+     ru:'Родился в Неаполе в 1990 году от итальянца и голландки. Один из самых известных муралистов Италии.',
+     zh:'1990年出生于那不勒斯，父亲是意大利人，母亲是荷兰人，是意大利最著名的壁画家之一。他的画中人物脸颊上总带有两条红色部落条纹，象征"人类部落"的统一。',
+     ja:'1990年ナポリ生まれ、イタリア人の父とオランダ人の母を持つ。イタリアで最も有名な壁画家の一人。対象の頬には常に「ヒューマン・トライブ」の統一を象徴する2本の赤い部族の縞。',
+     ar:'وُلد في نابولي عام 1990 لأب إيطالي وأم هولندية، وهو أحد أشهر رسامي الجداريات في إيطاليا.',
+   },
+   rating:4.9,reviews:234,lat:41.8912,lng:12.5450,city:'Roma',zone:'Pigneto / Prenestino',
+   performances:['Ex Snia Viscosa (Pigneto)','Ostiense','Torpignattara'],
+   instagram:'https://www.instagram.com/jorit/',website:null,igHandle:'@jorit',
+   reviews_data:[
+     {author:'Roberto C.',rating:5,
+      text:{it:'Il murale di Luana D\'Orazio all\'Ex Snia è devastante. Due strisce rosse e uno sguardo che ti entra nell\'anima. Arte civile al massimo livello possibile.',en:'The Luana D\'Orazio mural at the Ex Snia is devastating. Two red stripes and a gaze that pierces your soul. Civil art at the highest possible level.',es:'El mural de Luana D\'Orazio en el Ex Snia es devastador. Dos rayas rojas y una mirada que te entra en el alma.',fr:'La fresque de Luana D\'Orazio à l\'Ex Snia est dévastatrice. Deux rayas rouges et un regard qui vous pénètre l\'âme.',de:'Das Luana-D\'Orazio-Wandbild in der Ex Snia ist verheerend. Zwei rote Streifen und ein Blick, der die Seele trifft.',pt:'O mural de Luana D\'Orazio no Ex Snia é devastador.',nl:'De Luana D\'Orazio-muurschildering bij de Ex Snia is verwoestend.',pl:'Mural Luany D\'Orazio w Ex Snia jest druzgocący.',ru:'Мурал с Луаной Д\'Орацио в Ex Snia потрясает.',zh:'Ex Snia的Luana D\'Orazio壁画令人震撼。两条红色条纹和一个穿透灵魂的眼神。',ja:'Ex SniaのLuana D\'Orzioの壁画は圧倒的です。2本の赤い縞と魂を貫く視線。',ar:'جدارية لوانا دي أوراتسيو في إكس سنيا مدمرة. شريطان أحمران ونظرة تدخل الروح.'},
+      date:'2 giorni fa'},
+     {author:'Sara M.',rating:5,
+      text:{it:'Ho fatto il viaggio da Milano solo per vedere i suoi murales a Roma. Jorit ha trasformato i muri in monumenti umani — ogni opera è una preghiera laica.',en:'I made the trip from Milan just to see his murals in Rome. Jorit has turned walls into human monuments — every work is a secular prayer.',es:'Hice el viaje desde Milán solo para ver sus murales en Roma. Jorit ha transformado las paredes en monumentos humanos.',fr:'J\'ai fait le voyage depuis Milan juste pour voir ses fresques à Rome. Jorit a transformé les murs en monuments humains.',de:'Ich bin extra aus Mailand gereist, um seine Wandbilder in Rom zu sehen. Jorit hat Mauern in menschliche Denkmäler verwandelt.',pt:'Fiz a viagem de Milão especialmente para ver os seus murais em Roma.',nl:'Ik reisde van Milaan om zijn muurschilderingen in Rome te zien.',pl:'Pojechałam z Mediolanu specjalnie, żeby zobaczyć jego murale w Rzymie.',ru:'Я специально приехала из Милана, чтобы увидеть его муралы в Риме.',zh:'我专程从米兰来看他在罗马的壁画。Jorit把墙壁变成了人类的纪念碑。',ja:'ローマの彼の壁画を見るためにミラノから来ました。Joritは壁を人間の記念碑に変えました。',ar:'سافرت من ميلانو خصيصاً لرؤية جدارياته في روما. حول جوريت الجدران إلى آثار إنسانية.'},
+      date:'10 giorni fa'},
+   ]},
+  {id:'7',name:'Francesco Persichella',pseudo:'PIVSK',category:'murales',
+   bio:{
+     it:'Street artist romano, ha trasformato lo spazio abbandonato sotto il cavalcavia della Tangenziale Est (via dello Scalo San Lorenzo) in un coloratissimo campo da basket dipinto, ora punto di aggregazione del quartiere. Un esempio concreto di come l\'arte di strada possa riqualificare spazi urbani: non solo estetica, ma creazione di comunità.',
+     en:'Roman street artist who transformed the abandoned space under the East Ring Road viaduct (via dello Scalo San Lorenzo) into a colourful painted basketball court, now a community gathering point. A concrete example of how street art can regenerate urban spaces: not just aesthetics, but community building.',
+     es:'Street artist romano que transformó el espacio abandonado bajo el viaducto de la Tangencial Este en una colorida cancha de baloncesto pintada, ahora punto de encuentro del barrio.',
+     fr:'Street artiste romain qui a transformé l\'espace abandonné sous le viaduc du périphérique Est en un court de basket coloré, maintenant point de rencontre du quartier.',
+     de:'Römischer Street Artist, der den verlassenen Raum unter dem Viadukt des Ostrings (via dello Scalo San Lorenzo) in einen bunten bemalten Basketballplatz verwandelt hat.',
+     pt:'Street artista romano que transformou o espaço abandonado sob o viaduto da Tangencial Este num colorido campo de basquete pintado.',
+     nl:'Romeinse street artist die de verlaten ruimte onder het viaduct van de oostelijke ringweg omzette in een kleurrijke basketbalveld.',
+     pl:'Rzymski street artist, który zamienił opuszczoną przestrzeń pod wiaduktem wschodniej obwodnicy w kolorowe boisko do koszykówki.',
+     ru:'Римский стрит-арт художник, превративший заброшенное пространство под эстакадой Восточной кольцевой в красочную баскетбольную площадку.',
+     zh:'罗马街头艺术家，将东环路高架桥下的废弃空间（San Lorenzo货运站路）改造成了色彩鲜艳的彩绘篮球场，现已成为社区聚集地。',
+     ja:'東環状道路高架橋下の廃墟スペースをカラフルな絵が描かれたバスケットボールコートに変えたローマのストリートアーティスト。',
+     ar:'فنان شوارع روماني حوّل الفضاء المهجور تحت جسر الطريق الدائري الشرقي إلى ملعب كرة سلة ملوّن.',
+   },
+   rating:4.6,reviews:78,lat:41.8960,lng:12.5080,city:'Roma',zone:'San Lorenzo',
+   performances:['Via dello Scalo San Lorenzo','Pigneto'],
+   instagram:null,website:null,igHandle:null,
+   reviews_data:[
+     {author:'Davide L.',rating:5,
+      text:{it:'Il campo da basket sotto la Tangenziale è magico. Da spazio abbandonato e degradato a punto di incontro per il quartiere — questo è il potere reale della street art.',en:'The basketball court under the ring road is magical. From an abandoned and degraded space to a meeting point for the neighbourhood — this is the real power of street art.',es:'La cancha de baloncesto bajo la tangencial es mágica. De espacio abandonado a punto de encuentro del barrio — este es el verdadero poder del street art.',fr:'Le court de basket sous le périphérique est magique. D\'un espace abandonné à un point de rencontre pour le quartier.',de:'Der Basketballplatz unter dem Ring ist magisch. Vom verlassenen, heruntergekommenen Raum zum Treffpunkt für das Viertel.',pt:'O campo de basquete debaixo da tangencial é mágico. De espaço abandonado a ponto de encontro do bairro.',nl:'Het basketbalveld onder de ringweg is magisch.',pl:'Boisko do koszykówki pod obwodnicą jest magiczne.',ru:'Баскетбольная площадка под кольцевой дорогой — настоящее волшебство.',zh:'环城高速下的篮球场太神奇了。从废弃的破败空间到街区的聚集点——这就是街头艺术的真正力量。',ja:'環状道路の下のバスケットコートは魔法のようです。廃墟から地域の集まる場所へ。',ar:'ملعب كرة السلة تحت الطريق الدائري رائع. من فضاء مهجور إلى نقطة تجمع للحي.'},
+      date:'1 settimana fa'},
+     {author:'Chiara V.',rating:4,
+      text:{it:'Colori esplosivi in un angolo che nessuno guardava prima. Ha dato identità visiva a un posto che ne aveva urgente bisogno. Chapeau.',en:'Explosive colours in a corner that nobody looked at before. He gave visual identity to a place that urgently needed it. Hats off.',es:'Colores explosivos en un rincón que nadie miraba antes. Le dio identidad visual a un lugar que lo necesitaba urgentemente.',fr:'Des couleurs explosives dans un coin que personne ne regardait avant. Il a donné une identité visuelle à un endroit qui en avait urgemment besoin.',de:'Explosive Farben in einer Ecke, die vorher niemand beachtet hat. Er hat einem Ort, der es dringend brauchte, eine visuelle Identität gegeben.',pt:'Cores explosivas num canto que ninguém olhava antes. Deu identidade visual a um local que precisava urgentemente.',nl:'Explosieve kleuren in een hoek die niemand eerder bekeek.',pl:'Eksplozja kolorów w kącie, na który nikt wcześniej nie patrzył.',ru:'Взрывные цвета в углу, на который раньше никто не смотрел.',zh:'在以前无人注意的角落里有着爆炸性的色彩。他为一个迫切需要的地方赋予了视觉身份。',ja:'以前は誰も見向きもしなかった場所に爆発的な色彩。緊急に必要としていた場所に視覚的アイデンティティを与えました。',ar:'ألوان متفجرة في زاوية لم يلتفت إليها أحد من قبل. أعطى هويةً بصرية لمكان كان يحتاجها بشدة.'},
+      date:'1 mese fa'},
+   ]},
+  {id:'8',name:'Hitnes',pseudo:'Hitnes',category:'murales',
+   bio:{
+     it:'Street artist romano, uno dei protagonisti della scena capitolina da oltre vent\'anni. Noto per grandi murales che combinano elementi naturalistici — fauna, flora, mondo animale — con iconografie pop e culturali. Presente nel quartiere Ostiense insieme a Sten & Lex, Blu e altri grandi nomi. La sua ricerca mescola metafora visiva e precisione quasi scientifica nella rappresentazione degli animali.',
+     en:'Roman street artist, one of the leading figures of the capital\'s scene for over twenty years. Known for large murals combining naturalistic elements — fauna, flora, animal world — with pop and cultural iconographies. Present in the Ostiense district alongside Sten & Lex, Blu and other big names.',
+     es:'Street artista romano, uno de los protagonistas de la escena capitalina desde hace más de veinte años. Conocido por grandes murales que combinan elementos naturalistas con iconografías pop y culturales.',
+     fr:'Street artiste romain, l\'un des protagonistes de la scène de la capitale depuis plus de vingt ans. Connu pour de grandes fresques combinant éléments naturalistes — faune, flore, monde animal — avec des iconographies pop et culturelles.',
+     de:'Römischer Street Artist, einer der führenden Vertreter der Hauptstadtszene seit über zwanzig Jahren. Bekannt für große Wandbilder, die naturalistische Elemente mit Pop- und Kulturikonografien verbinden.',
+     pt:'Street artista romano, um dos protagonistas da cena da capital há mais de vinte anos. Conhecido por grandes murais que combinam elementos naturalistas com iconografias pop e culturais.',
+     nl:'Romeinse street artist, een van de hoofdrolspelers van de Romeinse scene gedurende meer dan twintig jaar.',
+     pl:'Rzymski street artist, jeden z głównych przedstawicieli sceny stołecznej od ponad dwudziestu lat.',
+     ru:'Римский стрит-арт художник, один из ведущих представителей столичной сцены более двадцати лет.',
+     zh:'罗马街头艺术家，二十多年来首都艺术圈的重要人物。以融合自然主义元素（动植物、动物世界）与流行文化图像的大型壁画著称。',
+     ja:'ローマのストリートアーティスト。20年以上にわたって首都のシーンをリードする存在。動植物など自然主義的な要素とポップ・文化的図像を組み合わせた大型壁画で知られる。',
+     ar:'فنان شوارع روماني، أحد أبرز وجوه مشهد العاصمة منذ أكثر من عشرين عاماً.',
+   },
+   rating:4.7,reviews:92,lat:41.8680,lng:12.4810,city:'Roma',zone:'Ostiense / Garbatella',
+   performances:['Ostiense','Garbatella','Pigneto'],
+   instagram:'https://www.instagram.com/hitnes/',website:null,igHandle:'@hitnes',
+   reviews_data:[
+     {author:'Luca T.',rating:5,
+      text:{it:'I suoi murales ad Ostiense sono entrati nel paesaggio urbano romano. Un naturalismo contemporaneo che dialoga con l\'architettura del quartiere.',en:'His murals in Ostiense have become part of the Roman urban landscape. A contemporary naturalism that dialogues with the architecture of the neighbourhood.',es:'Sus murales en Ostiense han entrado en el paisaje urbano romano. Un naturalismo contemporáneo que dialoga con la arquitectura del barrio.',fr:'Ses fresques à Ostiense font partie du paysage urbain romain. Un naturalisme contemporain qui dialogue avec l\'architecture du quartier.',de:'Seine Wandbilder in Ostiense sind Teil der römischen Stadtlandschaft geworden. Ein zeitgenössischer Naturalismus, der mit der Architektur des Viertels dialogisiert.',pt:'Os seus murais em Ostiense entraram na paisagem urbana romana.',nl:'Zijn muurschilderingen in Ostiense zijn onderdeel geworden van het Romeinse stadslandschap.',pl:'Jego murale w Ostiense stały się częścią rzymskiego krajobrazu miejskiego.',ru:'Его муралы в Остиенсе стали частью римского городского пейзажа.',zh:'他在Ostiense的壁画已融入罗马城市景观。一种与街区建筑对话的当代自然主义。',ja:'オスティエンセの彼の壁画はローマの都市景観の一部となっています。',ar:'جدارياته في أوستيينسي أصبحت جزءاً من المشهد الحضري الروماني.'},
+      date:'2 settimane fa'},
+     {author:'Marta B.',rating:4,
+      text:{it:'Molto bravo tecnicamente, si vede la padronanza. Avrei voluto più opere nel centro storico — merita visibilità ovunque.',en:'Technically very skilled, you can see the mastery. I would have liked more works in the historic centre — he deserves visibility everywhere.',es:'Muy bueno técnicamente, se nota el dominio. Habría querido más obras en el centro histórico.',fr:'Techniquement très bon, on voit la maîtrise. J\'aurais aimé plus d\'œuvres dans le centre historique.',de:'Technisch sehr gut, man sieht das Können. Ich hätte mir mehr Werke im historischen Zentrum gewünscht.',pt:'Tecnicamente muito bom, nota-se o domínio. Gostaria de ter mais obras no centro histórico.',nl:'Technisch zeer vaardig, je ziet de beheersing.',pl:'Technicznie bardzo dobry, widać mistrzostwo.',ru:'Технически очень хорош, чувствуется мастерство.',zh:'技术上非常精湛，可以感受到大师风范。我希望历史中心能有更多他的作品。',ja:'技術的に非常に優れており、熟練が伝わります。歴史的中心部にもっと作品があれば良かった。',ar:'ماهر جداً من الناحية التقنية، يظهر التمكن. كنت أتمنى المزيد من الأعمال في المركز التاريخي.'},
+      date:'3 settimane fa'},
+   ]},
+];
+
+// ── ARTISTI AGGIUNTIVI (ricerca web approfondita) ──
+ARTISTS.push(
+  {id:'9',name:'Federico Massa',pseudo:'Iena Cruz',category:'murales',
+   bio:{
+     it:'Street artist milanese (1981) che vive tra New York, Miami e Barcellona. Attivo dagli anni \'90, si distingue per murales monumentali a tema ambientale — fauna a rischio, inquinamento, crisi climatica. A Roma nel 2018 ha realizzato "Hunting Pollution" in via del Porto Fluviale (Ostiense): 1.000 mq con pittura ecologica Airlite che purifica l\'aria come 30 alberi. Il più grande eco-murales d\'Europa. Raffigura un airone tricolore (specie a rischio) che pesca in un mare inquinato sotto una pioggia di petrolio. Il progetto è di Yourban2030, no profit di Veronica De Angelis. Opera presente anche in via Tessalonica (San Paolo) con "Outside In", 250 mq anti-omofobia (2020).',
+     en:'Milanese street artist (1981) living between New York, Miami and Barcelona. Active since the 1990s, known for monumental murals on environmental themes — endangered species, pollution, climate crisis. In Rome in 2018 he created "Hunting Pollution" at via del Porto Fluviale (Ostiense): 1,000 sqm of eco-friendly Airlite paint that purifies air like 30 trees. The largest eco-mural in Europe, depicting an endangered heron fishing in a polluted sea under oil rain.',
+     es:'Artista callejero milanés (1981) que vive entre Nueva York, Miami y Barcelona. Activo desde los años 90, conocido por murales monumentales sobre temas ambientales. En Roma en 2018 realizó "Hunting Pollution" en via del Porto Fluviale: 1.000 m² con pintura ecológica Airlite que purifica el aire como 30 árboles.',
+     fr:'Street artiste milanais (1981) vivant entre New York, Miami et Barcelone. Actif depuis les années 1990, connu pour des murales monumentaux sur les thèmes environnementaux. À Rome en 2018 il a réalisé "Hunting Pollution" via del Porto Fluviale: 1 000 m² de peinture Airlite qui purifie l\'air comme 30 arbres.',
+     de:'Mailänder Street Artist (1981), lebt zwischen New York, Miami und Barcelona. Seit den 1990ern aktiv, bekannt für monumentale Wandbilder zu Umweltthemen. In Rom 2018 schuf er "Hunting Pollution" an der via del Porto Fluviale: 1.000 qm Airlite-Ökofarbe, die die Luft wie 30 Bäume reinigt.',
+     pt:'Artista de rua milanês (1981) que vive entre Nova Iorque, Miami e Barcelona. Ativo desde os anos 90, conhecido por murais monumentais sobre temas ambientais. Em Roma em 2018 realizou "Hunting Pollution" na via del Porto Fluviale: 1.000 m² de tinta ecológica Airlite.',
+     nl:'Milanese street artist (1981) die leeft tussen New York, Miami en Barcelona. Actief sinds de jaren 90, bekend om monumentale muurschilderingen over milieuonderwerpen. In Rome in 2018 maakte hij "Hunting Pollution" aan de via del Porto Fluviale: 1.000 m² Airlite eco-verf.',
+     pl:'Medioleński artysta uliczny (1981) mieszkający między Nowym Jorkiem, Miami i Barceloną. Aktywny od lat 90., znany z monumentalnych murali na temat środowiska. W Rzymie w 2018 roku stworzył "Hunting Pollution" przy via del Porto Fluviale.',
+     ru:'Миланский стрит-арт художник (1981), живущий между Нью-Йорком, Майами и Барселоной. Активен с 1990-х годов. В Риме в 2018 году создал "Hunting Pollution" на via del Porto Fluviale: 1000 кв.м экологической краски Airlite.',
+     zh:'米兰街头艺术家（1981年），往来于纽约、迈阿密和巴塞罗那之间。自90年代起活跃，以环境主题的大型壁画著称。2018年在罗马Ostiense区Porto Fluviale路创作了"Hunting Pollution"：1000平方米的Airlite生态涂料，净化空气相当于30棵树。欧洲最大的生态壁画。',
+     ja:'ミラノ出身のストリートアーティスト（1981年）。ニューヨーク、マイアミ、バルセロナを拠点に活動。1990年代から活躍し、環境問題をテーマとした巨大壁画で知られる。2018年にローマのオスティエンセ地区でヨーロッパ最大のエコ壁画「Hunting Pollution」（1000㎡）を制作。',
+     ar:'فنان شوارع ميلاني (1981) يعيش بين نيويورك وميامي وبرشلونة. نشط منذ التسعينيات، معروف بالجداريات الضخمة حول البيئة. في روما عام 2018 أنجز "Hunting Pollution" في via del Porto Fluviale: 1000 م² من طلاء Airlite البيئي.',
+   },
+   rating:4.8,reviews:178,lat:41.8695,lng:12.4757,city:'Roma',zone:'Ostiense / Piramide',
+   performances:['Via del Porto Fluviale / Via del Gazometro, Ostiense','Via Tessalonica, San Paolo'],
+   instagram:'https://www.instagram.com/ienacruz/',website:null,igHandle:'@ienacruz',
+   reviews_data:[
+     {author:'Lorenzo P.',rating:5,
+      text:{it:'"Hunting Pollution" è impressionante: un palazzo intero diventato manifesto ecologico. L\'airone è maestoso e il fatto che la pittura purifichi l\'aria lo rende unico al mondo.',en:'"Hunting Pollution" is impressive: an entire building turned into an ecological manifesto. The heron is majestic, and the fact that the paint purifies the air makes it unique in the world.',es:'"Hunting Pollution" es impresionante: un edificio entero convertido en manifiesto ecológico. La garza es majestuosa.',fr:'"Hunting Pollution" est impressionnant: tout un immeuble devenu manifeste écologique. Le héron est majestueux.',de:'"Hunting Pollution" ist beeindruckend: ein ganzes Gebäude als ökologisches Manifest. Der Reiher ist majestätisch.',pt:'"Hunting Pollution" é impressionante: um edifício inteiro transformado em manifesto ecológico.',nl:'"Hunting Pollution" is indrukwekkend: een heel gebouw als ecologisch manifest.',pl:'"Hunting Pollution" jest imponujące: cały budynek stał się ekologicznym manifestem.',ru:'"Hunting Pollution" — впечатляет: целое здание стало экологическим манифестом.',zh:'"Hunting Pollution"令人印象深刻：整栋楼变成了生态宣言。苍鹭气势宏伟。',ja:'"Hunting Pollution"は圧巻です：建物全体が生態学的マニフェストになっています。',ar:'"هانتنج بولوشن" مثير للإعجاب: مبنى بأكمله تحول إلى بيان بيئي. الطائر مهيب.'},
+      date:'1 mese fa'},
+     {author:'Sara G.',rating:5,
+      text:{it:'Sono passata di lì mille volte ma ogni volta l\'opera mi stupisce. Sapere che la vernice pulisce l\'aria del quartiere trafficato lo rende ancora più speciale.',en:'I\'ve walked past it a thousand times but each time the work amazes me. Knowing that the paint cleans the air of the busy neighbourhood makes it even more special.',es:'He pasado por allí mil veces pero cada vez la obra me sorprende. Saber que la pintura limpia el aire del barrio hace que sea aún más especial.',fr:'Je suis passée devant des milliers de fois mais l\'œuvre m\'impressionne à chaque fois.',de:'Ich bin tausendmal daran vorbeigegangen, aber jedes Mal überrascht mich das Werk.',pt:'Passei por lá mil vezes mas cada vez a obra me surpreende.',nl:'Ik liep er duizend keer langs maar het werk verbaast me elke keer.',pl:'Przeszłam tamtędy tysiąc razy, ale za każdym razem dzieło mnie zadziwia.',ru:'Я проходила мимо тысячу раз, но каждый раз работа удивляет меня.',zh:'我经过那里无数次，但每次这件作品都令我惊叹。知道油漆能净化繁忙街区的空气让它更加特别。',ja:'何千回も通り過ぎましたが、毎回この作品に驚かされます。',ar:'مررت من هناك ألف مرة لكن العمل يدهشني في كل مرة.'},
+      date:'2 settimane fa'},
+   ]},
+
+  {id:'10',name:'Michele Rech',pseudo:'Zerocalcare',category:'murales',
+   bio:{
+     it:'Fumettista e street artist romano (Arezzo, 1983; cresciuto a Rebibbia). Il suo alter ego narrativo è una tartaruga antropomorfa, il suo quartiere è protagonista assoluto dei fumetti. Nel dicembre 2014, in collaborazione con ATAC e Più Libri Più Liberi, ha dipinto un mammut di 40 mq all\'ingresso della metro B di Rebibbia. Il mammut — simbolo d\'orgoglio del quartiere, dove negli anni \'80 furono trovate zanne preistoriche — campeggia con la scritta: "Welcome to Rebibbia. Qui ci manca tutto, non ci serve niente." Nel 2023 il murale è stato restaurato green con pitture eco-sostenibili. Autore di "La profezia dell\'armadillo" (Netflix 2021: "Strappare lungo i bordi").',
+     en:'Roman cartoonist and street artist (Arezzo, 1983; grew up in Rebibbia). In December 2014, in collaboration with ATAC, he painted a 40 sqm mammoth at the entrance of metro B at Rebibbia. The mammoth — a symbol of neighbourhood pride, where prehistoric tusks were found in the 1980s — features the inscription: "Welcome to Rebibbia. We lack everything, we need nothing." In 2023 the mural was restored with eco-sustainable paints. Creator of "The Prophecy of the Armadillo" (Netflix 2021: "Tear Along the Dotted Line").',
+     es:'Dibujante y artista callejero romano (Arezzo, 1983; creció en Rebibbia). En diciembre de 2014 pintó un mamut de 40 m² en la entrada del metro B de Rebibbia. El mamut lleva la inscripción: "Welcome to Rebibbia. Aquí nos falta todo, no nos hace falta nada."',
+     fr:'Bédéiste et street artiste romain (Arezzo, 1983; a grandi à Rebibbia). En décembre 2014 il a peint un mammouth de 40 m² à l\'entrée du métro B à Rebibbia avec l\'inscription: "Welcome to Rebibbia. Ici il nous manque tout, nous n\'avons besoin de rien."',
+     de:'Römischer Comiczeichner und Street Artist (Arezzo, 1983; aufgewachsen in Rebibbia). Im Dezember 2014 malte er ein 40 qm großes Mammut am Eingang der Metro B in Rebibbia mit der Aufschrift: "Welcome to Rebibbia. Hier fehlt uns alles, wir brauchen nichts."',
+     pt:'Autor de banda desenhada e artista de rua romano (Arezzo, 1983; cresceu em Rebibbia). Em dezembro de 2014 pintou um mamute de 40 m² na entrada do metro B em Rebibbia.',
+     nl:'Romeinse striptekenaar en street artist (Arezzo, 1983; opgegroeid in Rebibbia). In december 2014 schilderde hij een mammoet van 40 m² bij de ingang van metro B in Rebibbia.',
+     pl:'Rzymski rysownik i artysta uliczny (Arezzo, 1983; dorastał w Rebibbia). W grudniu 2014 namalował mamuta 40 m² przy wejściu do metra B w Rebibbia.',
+     ru:'Римский комиксист и стрит-арт художник (Ареццо, 1983; вырос в Ребиббии). В декабре 2014 года нарисовал мамонта площадью 40 кв.м у входа в метро B на станции Rebibbia.',
+     zh:'罗马漫画家和街头艺术家（阿雷佐，1983年；在Rebibbia长大）。2014年12月与ATAC合作，在Rebibbia地铁B线入口处绘制了一幅40平方米的猛犸象壁画，题词："Welcome to Rebibbia。这里什么都缺，我们什么都不需要。"',
+     ja:'ローマ出身の漫画家・ストリートアーティスト（アレッツォ、1983年生まれ、レビッビア育ち）。2014年12月、ATACとの共同でレビッビア地下鉄B線入口に40㎡のマンモス壁画を制作。',
+     ar:'رسام كاريكاتير وفنان شوارع روماني (أريتسو، 1983؛ نشأ في ريبيبيا). في ديسمبر 2014 رسم ماموت 40 م² عند مدخل مترو B في ريبيبيا مع النقش: "مرحباً بكم في ريبيبيا. هنا كل شيء ناقص، لا نحتاج لأي شيء."',
+   },
+   rating:4.9,reviews:256,lat:41.9450,lng:12.5302,city:'Roma',zone:'Rebibbia',
+   performances:['Stazione Metro B Rebibbia','Via Ciciliano (zona Rebibbia)'],
+   instagram:'https://www.instagram.com/zerocalcare/',website:'https://zerocalcare.it',igHandle:'@zerocalcare',
+   reviews_data:[
+     {author:'Cristina M.',rating:5,
+      text:{it:'Il murale del mammut è un\'opera d\'amore per Rebibbia. Ogni volta che esco dalla metro mi commuove — è un inno alla periferia romana, sincero e fiero.',en:'The mammoth mural is a work of love for Rebibbia. Every time I come out of the metro it moves me — it\'s a sincere and proud anthem to the Roman suburbs.',es:'El mural del mamut es una obra de amor por Rebibbia. Cada vez que salgo del metro me emociona — es un himno sincero y orgulloso a las afueras romanas.',fr:'La fresque du mammouth est une œuvre d\'amour pour Rebibbia. Chaque fois que je sors du métro elle m\'émeut.',de:'Das Mammut-Wandbild ist ein Liebeswerk für Rebibbia. Jedes Mal, wenn ich aus der U-Bahn komme, bewegt es mich.',pt:'O mural do mamute é uma obra de amor por Rebibbia. Cada vez que saio do metro emociona-me.',nl:'Het mammoetschilderij is een liefdeswerk voor Rebibbia. Elke keer als ik uit de metro kom, ontroert het me.',pl:'Mural z mamutem to dzieło miłości do Rebibbia. Za każdym razem, gdy wychodzę z metra, wzrusza mnie.',ru:'Мурал с мамонтом — это произведение любви к Ребиббии. Каждый раз, выходя из метро, я растроган.',zh:'猛犸象壁画是对Rebibbia的爱的作品。每次出地铁都会感动我——是对罗马郊区真诚而自豪的颂歌。',ja:'マンモスの壁画はレビッビアへの愛の作品です。地下鉄から出るたびに感動します。',ar:'جدارية الماموث عمل حب لريبيبيا. في كل مرة أخرج من المترو يؤثر فيّ.'},
+      date:'3 giorni fa'},
+     {author:'Daniele S.',rating:5,
+      text:{it:'Venivo qui da fuori Roma solo per vedere il mammut. L\'ironia e la malinconia di Zerocalcare per il suo quartiere sono incapsulate perfettamente in questo disegno.',en:'I came here from outside Rome just to see the mammoth. Zerocalcare\'s irony and melancholy for his neighbourhood are perfectly encapsulated in this drawing.',es:'Vine aquí desde fuera de Roma solo para ver el mamut. La ironía y la melancolía de Zerocalcare por su barrio están perfectamente encapsuladas en este dibujo.',fr:'Je suis venu de l\'extérieur de Rome juste pour voir le mammouth. L\'ironie et la mélancolie de Zerocalcare pour son quartier sont parfaitement encapsulées dans ce dessin.',de:'Ich kam extra aus außerhalb Roms, um das Mammut zu sehen.',pt:'Vim de fora de Roma só para ver o mamute.',nl:'Ik kwam van buiten Rome om het mammoet te zien.',pl:'Przyjechałem spoza Rzymu tylko po to, żeby zobaczyć mamuta.',ru:'Я специально приехал из-за пределов Рима, чтобы увидеть мамонта.',zh:'我从罗马郊外来只是为了看猛犸象。Zerocalcare对他街区的讽刺和忧郁在这幅画中被完美地封存。',ja:'ローマの外からわざわざマンモスを見に来ました。',ar:'جئت من خارج روما فقط لأرى الماموث.'},
+      date:'2 settimane fa'},
+   ]},
+
+  {id:'11',name:'Blu',pseudo:'Blu',category:'murales',
+   bio:{
+     it:'Street artist anonimo italiano (Senigallia, ~1980), tra i più influenti al mondo secondo The Guardian. Formazione bolognese, stile fumettistico e caricaturale fortemente politico e sociale. A Roma opere monumentali all\'ex Caserma dell\'Aeronautica Militare (via del Porto Fluviale / via delle Conce, Ostiense): "I Mille Volti", due facciate ~2.000 mq con personaggi che denunciano ingiustizie sociali, sfruttamento, capitalismo (2013–2014). A Rebibbia: "Càpita" in via Ciciliano — uno scivolo acquatico intestinale che separa ricchi e poveri — e "La Spirale dell\'Evoluzione". Evita festival e gallerie. Ha distrutto i propri murales a Berlino e Bologna per protestare contro la gentrificazione dell\'arte di strada.',
+     en:'Anonymous Italian street artist (Senigallia, ~1980), among the most influential in the world according to The Guardian. Bologna-based, with a strongly political and social cartoon-like style. In Rome, monumental works at the former Military Aeronautics Barracks (via del Porto Fluviale / via delle Conce, Ostiense): two facades ~2,000 sqm featuring characters denouncing social injustices (2013–2014). In Rebibbia: "Càpita" — an intestinal waterslide separating rich and poor. He destroyed his own murals in Berlin and Bologna to protest against the gentrification of street art.',
+     es:'Artista callejero anónimo italiano (Senigallia, ~1980), entre los más influyentes del mundo según The Guardian. Estilo fumettístico muy político y social. En Roma, obras monumentales en la antigua Caserma dell\'Aeronautica (Ostiense) y en Rebibbia.',
+     fr:'Street artiste anonyme italien (Senigallia, ~1980), parmi les plus influents au monde selon The Guardian. À Rome, œuvres monumentales sur l\'ex-Caserne de l\'Aéronautique (Ostiense) et à Rebibbia.',
+     de:'Anonymer italienischer Street Artist (Senigallia, ~1980), laut The Guardian einer der einflussreichsten der Welt. In Rom monumentale Werke an der Ex-Kaserne der Aeronautik (Ostiense) und in Rebibbia.',
+     pt:'Artista de rua anónimo italiano (Senigallia, ~1980), entre os mais influentes do mundo segundo The Guardian. Em Roma, obras monumentais na antiga Caserna da Aeronáutica (Ostiense) e em Rebibbia.',
+     nl:'Anonieme Italiaanse street artist (Senigallia, ~1980), een van de meest invloedrijke ter wereld volgens The Guardian. In Rome monumentale werken bij de voormalige luchtvaartkazerne (Ostiense) en in Rebibbia.',
+     pl:'Anonimowy włoski artysta uliczny (Senigallia, ~1980), jeden z najbardziej wpływowych na świecie według The Guardian. W Rzymie monumentalne prace przy byłych koszarach lotniczych (Ostiense) i w Rebibbia.',
+     ru:'Анонимный итальянский стрит-арт художник (Сенигаллия, ~1980), один из самых влиятельных в мире по версии The Guardian. В Риме монументальные работы на бывших казармах ВВС (Остиенсе) и в Ребиббии.',
+     zh:'匿名意大利街头艺术家（塞尼加利亚，约1980年），据《卫报》评选为全球最具影响力的艺术家之一。在罗马，于Ostiense的前军事航空兵营（Porto Fluviale路/Conce路）留有约2000平方米的巨型作品，在Rebibbia有"Càpita"等政治壁画。',
+     ja:'匿名のイタリア人ストリートアーティスト（セニガッリア、1980年頃）。ガーディアン紙によれば世界で最も影響力のあるアーティストの一人。ローマではオスティエンセの旧空軍兵営（約2000㎡）とレビッビアに政治的な大型作品を残す。',
+     ar:'فنان شوارع إيطالي مجهول الهوية (سينيغاليا، ~1980)، من أكثر الفنانين تأثيراً في العالم وفق صحيفة الغارديان. في روما أعمال ضخمة في ثكنة سلاح الجو السابقة (أوستيينسي) وفي ريبيبيا.',
+   },
+   rating:4.9,reviews:312,lat:41.8698,lng:12.4762,city:'Roma',zone:'Ostiense / Rebibbia',
+   performances:['Via del Porto Fluviale, Ostiense (ex Caserma Aeronautica)','Via Ciciliano, Rebibbia','Via Palombini, Rebibbia','Ex Cinodromo, Ponte Marconi'],
+   instagram:null,website:'https://blublu.org',igHandle:null,
+   reviews_data:[
+     {author:'Matteo R.',rating:5,
+      text:{it:'I "Mille Volti" sulla caserma dell\'Ostiense erano un\'opera unica. Ogni personaggio una storia, ogni finestra un occhio che ti guarda. Arte politica al suo massimo.',en:'The "Thousand Faces" on the Ostiense barracks were a unique work. Every character a story, every window an eye watching you. Political art at its finest.',es:'Los "Mil Rostros" en la caserna de Ostiense eran una obra única. Cada personaje una historia, cada ventana un ojo que te mira.',fr:'Les "Mille Visages" sur la caserne d\'Ostiense étaient une œuvre unique. Chaque personnage une histoire, chaque fenêtre un œil qui vous regarde.',de:'Die "Tausend Gesichter" an der Ostiense-Kaserne waren ein einzigartiges Werk.',pt:'Os "Mil Rostos" na caserna de Ostiense eram uma obra única.',nl:'De "Duizend Gezichten" op de kazerne van Ostiense waren een uniek werk.',pl:'"Tysiąc Twarzy" na koszarach Ostiense było unikalnym dziełem.',ru:'"Тысяча лиц" на казарме Остиенсе было уникальным произведением.',zh:'Ostiense兵营上的"千张面孔"是一件独一无二的作品。每个人物都有一段故事，每扇窗户都是一双注视着你的眼睛。',ja:'オスティエンセの兵営の「千の顔」はユニークな作品でした。',ar:'"الوجوه الألف" على الثكنة كانت عملاً فريداً.'},
+      date:'1 settimana fa'},
+     {author:'Giulia N.',rating:5,
+      text:{it:'"Càpita" a Rebibbia è un capolavoro di satira sociale. Uno scivolo intestinale che separa chi nuota nell\'oro da chi vive in povertà — visivamente brutale, intellettualmente perfetto.',en:'"Càpita" in Rebibbia is a masterpiece of social satire. An intestinal waterslide separating those swimming in gold from those living in poverty — visually brutal, intellectually perfect.',es:'"Càpita" en Rebibbia es una obra maestra de sátira social. Un tobogán intestinal que separa a los que nadan en oro de los que viven en pobreza.',fr:'"Càpita" à Rebibbia est un chef-d\'œuvre de satire sociale. Un toboggan intestinal séparant ceux qui nagent dans l\'or de ceux qui vivent dans la pauvreté.',de:'"Càpita" in Rebibbia ist ein Meisterwerk sozialer Satire.',pt:'"Càpita" em Rebibbia é uma obra-prima de sátira social.',nl:'"Càpita" in Rebibbia is een meesterwerk van sociale satire.',pl:'"Càpita" w Rebibbia to arcydzieło satyry społecznej.',ru:'"Càpita" в Ребиббии — шедевр социальной сатиры.',zh:'Rebibbia的"Càpita"是社会讽刺的杰作。',ja:'レビッビアの"Càpita"は社会風刺の傑作です。',ar:'"كابيتا" في ريبيبيا تحفة في السخرية الاجتماعية.'},
+      date:'3 settimane fa'},
+   ]},
+
+  {id:'12',name:'Agostino Iacurci',pseudo:'Iacurci',category:'murales',
+   bio:{
+     it:'Artista pugliese (Foggia, 1986) che vive e lavora a Bologna. Studia Arti Visive all\'Accademia di Belle Arti di Roma. Stile inconfondibile: figure geometriche stilizzate, colori piatti brillanti, personaggi buffi in formato gigante. Opere a Tor Marancia (Big City Life, 2015) — tra cui "Il Nuotatore" in via Ostiense — e nei cortili del carcere di Rebibbia a massima sicurezza. Ha collaborato con Apple, Adidas, Hermès, Starbucks e The New Yorker. Premio New York 2019 con mostra all\'ISCP di Brooklyn. Citato nell\'Enciclopedia Treccani.',
+     en:'Apulian artist (Foggia, 1986) living and working in Bologna. Studied Visual Arts at the Academy of Fine Arts in Rome. Unmistakable style: stylised geometric figures, flat bright colours, funny characters in giant format. Works at Tor Marancia (Big City Life, 2015) and in the high-security wing of Rebibbia prison. Collaborations with Apple, Adidas, Hermès, Starbucks and The New Yorker. New York Prize 2019 with show at ISCP in Brooklyn. Listed in the Treccani Encyclopedia.',
+     es:'Artista pugliés (Foggia, 1986) que vive y trabaja en Bolonia. Estilo inconfundible: figuras geométricas estilizadas, colores planos y brillantes. Obras en Tor Marancia (Big City Life, 2015). Colaboraciones con Apple, Adidas, Hermès y The New Yorker.',
+     fr:'Artiste des Pouilles (Foggia, 1986) vivant et travaillant à Bologne. Style inimitable: figures géométriques stylisées, couleurs plates et vives. Œuvres à Tor Marancia (Big City Life, 2015) et dans la prison de Rebibbia.',
+     de:'Apulischer Künstler (Foggia, 1986), lebt und arbeitet in Bologna. Unverwechselbarer Stil: stilisierte geometrische Figuren, flache leuchtende Farben. Werke in Tor Marancia (Big City Life, 2015) und im Hochsicherheitstrakt des Gefängnisses Rebibbia.',
+     pt:'Artista puglies (Foggia, 1986) que vive e trabalha em Bolonha. Estilo inconfundível: figuras geométricas estilizadas, cores planas e brilhantes. Obras em Tor Marancia (Big City Life, 2015).',
+     nl:'Apulische kunstenaar (Foggia, 1986) die in Bologna woont en werkt. Onmiskenbare stijl: gestileerde geometrische figuren, vlakke heldere kleuren. Werken in Tor Marancia (Big City Life, 2015).',
+     pl:'Pugliański artysta (Foggia, 1986) mieszkający i pracujący w Bolonii. Niezapomniany styl: stylizowane figury geometryczne, płaskie jasne kolory. Prace w Tor Marancia (Big City Life, 2015).',
+     ru:'Художник из Апулии (Фоджа, 1986), живёт и работает в Болонье. Узнаваемый стиль: стилизованные геометрические фигуры, плоские яркие цвета. Работы в Тор-Маранча (Big City Life, 2015).',
+     zh:'阿普利亚艺术家（福贾，1986年），在博洛尼亚生活和工作。在罗马美术学院学习视觉艺术。独特风格：程式化的几何图形、平面鲜艳色彩、巨幅滑稽人物。在Tor Marancia（Big City Life，2015年）有作品。曾与苹果、阿迪达斯、爱马仕、星巴克合作。被《特雷卡尼百科全书》收录。',
+     ja:'プーリア出身のアーティスト（フォッジャ、1986年）、ボローニャ在住。ローマ美術アカデミーで視覚芸術を学ぶ。独特のスタイル：様式化された幾何学的図形、平面的な鮮やかな色彩、巨大なコミカルキャラクター。トル・マランチャ（Big City Life、2015年）に作品あり。',
+     ar:'فنان بوليا (فوجيا، 1986) يعيش ويعمل في بولونيا. أسلوب لا يُنسى: أشكال هندسية مبسطة، ألوان صاخبة. أعمال في تور ماريانشا (Big City Life، 2015).',
+   },
+   rating:4.7,reviews:134,lat:41.8603,lng:12.4845,city:'Roma',zone:'Tor Marancia / Ostiense',
+   performances:['Via di Tor Marancia 63 (Big City Life)','Via Ostiense (Il Nuotatore)','Carcere Rebibbia'],
+   instagram:'https://www.instagram.com/agostinoiacurci/',website:'https://www.agostinoiacurci.com',igHandle:'@agostinoiacurci',
+   reviews_data:[
+     {author:'Veronica T.',rating:5,
+      text:{it:'Le sue figure stilizzate a Tor Marancia hanno una leggerezza e una poesia rara. Ti fanno sorridere e pensare allo stesso tempo — non è una cosa facile da ottenere.',en:'His stylised figures at Tor Marancia have a rare lightness and poetry. They make you smile and think at the same time — not an easy thing to achieve.',es:'Sus figuras estilizadas en Tor Marancia tienen una ligereza y poesía rara. Te hacen sonreír y pensar al mismo tiempo.',fr:'Ses figures stylisées à Tor Marancia ont une légèreté et une poésie rares. Elles vous font sourire et réfléchir en même temps.',de:'Seine stilisierten Figuren in Tor Marancia haben eine seltene Leichtigkeit und Poesie.',pt:'As suas figuras estilizadas em Tor Marancia têm uma leveza e poesia rara.',nl:'Zijn gestileerde figuren in Tor Marancia hebben een zeldzame lichtheid en poëzie.',pl:'Jego stylizowane postacie w Tor Marancia mają rzadką lekkość i poezję.',ru:'Его стилизованные фигуры в Тор-Маранча обладают редкой лёгкостью и поэзией.',zh:'他在Tor Marancia的风格化人物有着罕见的轻盈和诗意。它们让你同时微笑和思考。',ja:'トル・マランチャの彼の様式化された人物像は稀な軽やかさと詩情を持っています。',ar:'أشكاله المبسطة في تور ماريانشا لها خفة وشاعرية نادرة.'},
+      date:'5 giorni fa'},
+     {author:'Andrea C.',rating:4,
+      text:{it:'Stile immediato e riconoscibile, quasi da illustrazione per bambini ma con contenuti profondi. Ha trasformato palazzi anonimi in libri illustrati giganti.',en:'Immediate and recognisable style, almost like children\'s illustration but with deep content. He has transformed anonymous buildings into giant picture books.',es:'Estilo inmediato y reconocible, casi como ilustración infantil pero con contenidos profundos.',fr:'Style immédiat et reconnaissable, presque comme une illustration pour enfants mais avec un contenu profond.',de:'Unmittelbarer und erkennbarer Stil, fast wie Kinderbuchillustration, aber mit tiefem Inhalt.',pt:'Estilo imediato e reconhecível, quase como ilustração infantil mas com conteúdo profundo.',nl:'Onmiddellijke en herkenbare stijl, bijna als kinderillustratie maar met diepere inhoud.',pl:'Natychmiastowy i rozpoznawalny styl, prawie jak ilustracja dla dzieci, ale z głębokimi treściami.',ru:'Непосредственный и узнаваемый стиль, почти как детская иллюстрация, но с глубоким содержанием.',zh:'直接而可识别的风格，几乎像儿童插图，但内容深刻。',ja:'すぐに認識できるスタイルで、子供向けの絵本のようでありながら深い内容があります。',ar:'أسلوب مباشر وسهل التعرف عليه، يشبه رسوم الأطفال لكن بمضامين عميقة.'},
+      date:'1 mese fa'},
+   ]},
+
+  {id:'13',name:'Etam Cru',pseudo:'Bezt & Sainer',category:'murales',
+   bio:{
+     it:'Duo artistico polacco composto da Bezt (Przemek Blejzyk) e Sainer (Łukasz Liszko), tra i più famosi street artist europei. A Roma, al confine tra Pigneto e Torpignattara, hanno realizzato "Coffee Break" (2012): il murale più alto della città con i suoi 32 metri, che raffigura un uomo con i baffi che esce da un secchio della spazzatura tenendo in mano una tazzina di caffè. Opere presenti in tutta Europa (Varsavia, Berlino, Barcellona) e oltre. Il loro stile combina iperrealismo con elementi surreali e onirici, scene di vita quotidiana ampliate in scala monumentale.',
+     en:'Polish artistic duo composed of Bezt (Przemek Blejzyk) and Sainer (Łukasz Liszko), among the most famous European street artists. In Rome, on the border between Pigneto and Torpignattara, they created "Coffee Break" (2012): the tallest mural in the city at 32 metres, depicting a mustachioed man emerging from a rubbish bin holding a coffee cup. Works present throughout Europe and beyond.',
+     es:'Dúo artístico polaco compuesto por Bezt y Sainer, entre los street artists europeos más famosos. En Roma crearon "Coffee Break" (2012): el mural más alto de la ciudad con 32 metros, que muestra a un hombre bigotudo saliendo de un cubo de basura sosteniendo una taza de café.',
+     fr:'Duo artistique polonais composé de Bezt et Sainer, parmi les street artistes européens les plus célèbres. À Rome ils ont créé "Coffee Break" (2012): la fresque la plus haute de la ville avec 32 mètres.',
+     de:'Polnisches Künstlerduo aus Bezt und Sainer, zu den bekanntesten europäischen Street Artists. In Rom schufen sie "Coffee Break" (2012): das höchste Wandbild der Stadt mit 32 Metern.',
+     pt:'Duo artístico polaco composto por Bezt e Sainer, entre os street artists europeus mais famosos. Em Roma criaram "Coffee Break" (2012): o mural mais alto da cidade com 32 metros.',
+     nl:'Pools artistiek duo bestaand uit Bezt en Sainer, behorend tot de bekendste Europese street artists. In Rome maakten ze "Coffee Break" (2012): het hoogste muurschildering van de stad met 32 meter.',
+     pl:'Polskie duo artystyczne złożone z Bezta i Sainera, należące do najsłynniejszych europejskich street artystów. W Rzymie stworzyli "Coffee Break" (2012): najwyższy mural w mieście o wysokości 32 metrów.',
+     ru:'Польский творческий дуэт из Безта и Сайнера, один из самых известных европейских стрит-арт дуэтов. В Риме создали "Coffee Break" (2012): самый высокий мурал города высотой 32 метра.',
+     zh:'波兰艺术二人组，由Bezt和Sainer组成，是欧洲最著名的街头艺术家之一。在罗马，在Pigneto和Torpignattara交界处创作了"Coffee Break"（2012年）：高达32米的全市最高壁画，描绘一个留胡子的男人从垃圾桶里爬出来，手持一杯咖啡。',
+     ja:'ベツトとサイナーからなるポーランドのアーティストデュオ。ヨーロッパで最も有名なストリートアーティストの一組。ローマでは2012年にピニェートとトルピニャッターラの境界に高さ32メートルの市内最高の壁画「Coffee Break」を制作。',
+     ar:'ثنائي فني بولندي مكون من بيزت وساينر، من أشهر فناني الشوارع الأوروبيين. في روما أنجزا "Coffee Break" (2012): أعلى جدارية في المدينة بارتفاع 32 متراً.',
+   },
+   rating:4.8,reviews:167,lat:41.8905,lng:12.5390,city:'Roma',zone:'Torpignattara / Pigneto',
+   performances:['Via Grotta Perfetta / Via Facchinetti, Torpignattara'],
+   instagram:'https://www.instagram.com/etamcru/',website:'https://etamcru.com',igHandle:'@etamcru',
+   reviews_data:[
+     {author:'Alessandro F.',rating:5,
+      text:{it:'"Coffee Break" è il murale più assurdo e bello di Roma. Un uomo che emerge da un bidone con una tazzina di caffè su un palazzo di 32 metri — il surrealismo urbano al suo apice.',en:'"Coffee Break" is the most absurd and beautiful mural in Rome. A man emerging from a bin with a coffee cup on a 32-metre building — urban surrealism at its peak.',es:'"Coffee Break" es el mural más absurdo y hermoso de Roma. Un hombre emergiendo de un cubo con una taza de café en un edificio de 32 metros.',fr:'"Coffee Break" est la fresque la plus absurde et la plus belle de Rome. Un homme sortant d\'une poubelle avec une tasse de café sur un immeuble de 32 mètres.',de:'"Coffee Break" ist das surrealste und schönste Wandbild Roms. Ein Mann, der aus einem Mülleimer mit einer Kaffeetasse an einem 32-Meter-Gebäude auftaucht.',pt:'"Coffee Break" é o mural mais absurdo e belo de Roma.',nl:'"Coffee Break" is het meest absurde en mooie muurschildering van Rome.',pl:'"Coffee Break" to najbardziej absurdalny i piękny mural Rzymu.',ru:'"Coffee Break" — самый абсурдный и красивый мурал Рима.',zh:'"Coffee Break"是罗马最荒诞而美丽的壁画。一个男人从垃圾桶里钻出来，手拿咖啡杯，画在32米高的楼上——城市超现实主义的巅峰。',ja:'"Coffee Break"はローマで最も不条理で美しい壁画です。32メートルのビルに、ゴミ箱からコーヒーカップを持って出てきた男。',ar:'"Coffee Break" هو أكثر الجداريات غرابةً وجمالاً في روما.'},
+      date:'1 settimana fa'},
+     {author:'Lucia P.',rating:5,
+      text:{it:'Ho dovuto fare tre passi indietro per vedere l\'opera intera. Alta come un palazzo di dieci piani, eppure ogni dettaglio è perfettamente curato. Tecnica sopraffina.',en:'I had to take three steps back to see the whole work. Tall as a ten-storey building, yet every detail is perfectly crafted. Superb technique.',es:'Tuve que dar tres pasos atrás para ver la obra entera. Alta como un edificio de diez pisos, pero cada detalle está perfectamente cuidado.',fr:'J\'ai dû reculer de trois pas pour voir l\'œuvre entière. Haute comme un immeuble de dix étages, mais chaque détail est parfaitement soigné.',de:'Ich musste drei Schritte zurücktreten, um das ganze Werk zu sehen. Groß wie ein zehnstöckiges Gebäude, aber jedes Detail ist perfekt ausgearbeitet.',pt:'Tive de dar três passos atrás para ver a obra inteira.',nl:'Ik moest drie stappen terugnemen om het hele werk te zien.',pl:'Musiałam cofnąć się o trzy kroki, żeby zobaczyć całe dzieło.',ru:'Мне пришлось сделать три шага назад, чтобы увидеть всю работу.',zh:'我不得不退后三步才能看到整件作品。高如十层楼，却每个细节都完美精致。',ja:'全体を見るために三歩引かなければなりませんでした。10階建てのビルほどの高さですが、すべての細部が完璧に仕上げられています。',ar:'كان علي أن أتراجع ثلاث خطوات لرؤية العمل بالكامل. بارتفاع مبنى مؤلف من عشرة طوابق لكن كل التفاصيل مصنوعة بإتقان.'},
+      date:'3 settimane fa'},
+   ]}
+);
+let EXHIBITIONS=[
+  {id:'e1',title:'Roma Buskers Festival 2026',artist:'Artisti internazionali',artistId:null,
+   category:'musica',date:'2026-06-15',time:'18:00',location:'Porto Turistico di Roma, Ostia',
+   lat:41.7314,lng:12.2803,free:true},
+  {id:'e2',title:'Live Painting — Alicè',artist:'Alice Pasquini',artistId:'1',
+   category:'murales',date:'2026-04-10',time:'10:00',location:'Mercato di Testaccio, Roma',
+   lat:41.8816,lng:12.4742,free:true},
+  {id:'e3',title:'Sten & Lex — Nuovo Stencil Poster',artist:'Sten & Lex',artistId:'2',
+   category:'stencil',date:'2026-05-03',time:'09:00',location:'Via delle Conce, Ostiense',
+   lat:41.8680,lng:12.4948,free:true},
+  {id:'e4',title:'Tour Street Art Ostiense',artist:'Guide YouLocal Rome',artistId:null,
+   category:'murales',date:'2026-04-19',time:'10:30',location:'Metro Piramide (partenza tour)',
+   lat:41.8743,lng:12.4822,free:false},
+  {id:'e5',title:'MURo — Apertura Stagione Quadraro',artist:'Diavù Vecchiato',artistId:null,
+   category:'murales',date:'2026-05-17',time:'10:00',location:'Largo dei Quintili, Quadraro',
+   lat:41.8700,lng:12.5250,free:true},
+  {id:'e6',title:'Coffee Break Talk — Etam Cru al Pigneto',artist:'Bezt & Sainer',artistId:'13',
+   category:'murales',date:'2026-06-07',time:'18:00',location:'Via Fanfulla da Lodi, Pigneto',
+   lat:41.8905,lng:12.5390,free:true},
+  {id:'e7',title:'Hunting Pollution — Visita Guidata',artist:'Yourban2030',artistId:'9',
+   category:'murales',date:'2026-04-26',time:'11:00',location:'Via del Porto Fluviale, Ostiense',
+   lat:41.8695,lng:12.4757,free:true},
+];
+
+let REVS={};
+let aTab='artisti',vMode='mappa',sCat='tutti',addType='artista',addCat='',revRating=0;
+let map,markers=[];
+
+document.addEventListener('DOMContentLoaded',()=>{
+  renderCats();
+  initMap();
+  initMapDragStop();
+  updateFooter();
+  document.getElementById('langBtn').addEventListener('click',toggleLangMenu);
+});
+
+function gc(id){return CATS.find(c=>c.id===id)?.color||'#7B2FBE';}
+function gi(id){return CATS.find(c=>c.id===id)?.icon||'⭐';}
+function gl(id){const c=CATS.find(x=>x.id===id);return c?t(c.labelKey):id;}
+
+function renderCats(){
+  document.getElementById('catsContainer').innerHTML=CATS.map(c=>`
+    <button class="cat-pill ${sCat===c.id?'active':''}"
+      style="${sCat===c.id?`background:${c.color};border-color:${c.color}`:''}"
+      onclick="selCat('${c.id}')">${c.icon} ${t(c.labelKey)}</button>`).join('');
+}
+function selCat(id){sCat=id;renderCats();applyFilters();}
+
+function switchTab(t){aTab=t;document.getElementById('tab-artisti').classList.toggle('active',t==='artisti');document.getElementById('tab-esibizioni').classList.toggle('active',t==='esibizioni');applyFilters();}
+function switchView(m){
+  vMode=m;
+  document.getElementById('view-mappa').classList.toggle('active',m==='mappa');
+  document.getElementById('view-lista').classList.toggle('active',m==='lista');
+  document.getElementById('map').style.display=m==='mappa'?'block':'none';
+  document.getElementById('listView').classList.toggle('show',m==='lista');
+  if(m==='mappa'){setTimeout(()=>map.invalidateSize(),50);closePopup();}else renderList();
+}
+
+// ── GEOLOCATION STATE ──
+let userMarker=null, userCircle=null, watchId=null, userPos=null, isTracking=false;
+
+function initMap(){
+  map=L.map('map',{zoomControl:true,attributionControl:true}).setView([41.8967,12.4822],13);
+  L.tileLayer('https://{s}.basemaps.cartocdn.com/light_all/{z}/{x}/{y}{r}.png',{attribution:'© OpenStreetMap © CartoDB',maxZoom:19}).addTo(map);
+  map.on('click',()=>{closePopup();});
+  renderMarkers();
+  startGeolocation();
+}
+
+function showToast(msg,duration=3000){
+  const t=document.getElementById('geoToast');
+  t.textContent=msg;t.classList.add('show');
+  clearTimeout(t._tid);
+  t._tid=setTimeout(()=>t.classList.remove('show'),duration);
+}
+
+function startGeolocation(){
+  // Always show "open in maps" button as helper
+  renderOpenMapsBtn();
+
+  if(!navigator.geolocation){
+    showToast(t('geoNA'));
+    useIPGeolocation();
+    return;
+  }
+  showToast(t('geoSearching'),60000);
+
+  // Step 1 – coarse fix (WiFi/cell, fast)
+  navigator.geolocation.getCurrentPosition(
+    pos=>{ if(!userPos||userPos.acc>pos.coords.accuracy) onPosition(pos); },
+    ()=>{ if(!userPos) useIPGeolocation(); },
+    {enableHighAccuracy:false,timeout:4000,maximumAge:60000}
+  );
+
+  // Step 2 – high-accuracy GPS watch
+  watchId=navigator.geolocation.watchPosition(
+    onPosition,
+    err=>{
+      if(!userPos) useIPGeolocation();
+      onGeoError(err);
+    },
+    {enableHighAccuracy:true,timeout:25000,maximumAge:0}
+  );
+}
+
+// IP-based fallback (city-level, ~1-10km accuracy — clearly labelled)
+async function useIPGeolocation(){
+  try{
+    showToast('🌐 Posizione approssimativa via IP…',8000);
+    const r=await fetch('https://ipapi.co/json/');
+    const d=await r.json();
+    if(d.latitude&&d.longitude){
+      const fakePos={coords:{latitude:d.latitude,longitude:d.longitude,accuracy:5000}};
+      onPosition(fakePos,true); // true = isIPFallback
+    }
+  }catch(e){
+    showToast('⚠️ Posizione non disponibile',4000);
+  }
+}
+
+function renderOpenMapsBtn(){
+  if(document.getElementById('openMapsBtn')) return;
+  const btn=document.createElement('button');
+  btn.id='openMapsBtn';
+  btn.title='Apri Google Maps per vedere la tua posizione esatta';
+  btn.innerHTML='🗺️';
+  btn.onclick=()=>{
+    const url=userPos
+      ?`https://www.google.com/maps?q=${userPos.lat},${userPos.lng}`
+      :'https://www.google.com/maps';
+    window.open(url,'_blank');
+  };
+  btn.style.cssText='position:absolute;bottom:144px;right:14px;z-index:1000;width:40px;height:40px;background:#fff;border:none;border-radius:10px;box-shadow:0 2px 10px rgba(0,0,0,.2);cursor:pointer;font-size:18px;display:flex;align-items:center;justify-content:center;transition:all .15s';
+  document.querySelector('.main').appendChild(btn);
+}
+
+function onPosition(pos, isIPFallback=false){
+  const lat=pos.coords.latitude;
+  const lng=pos.coords.longitude;
+  const acc=Math.round(pos.coords.accuracy);
+
+  // Only update if new fix is better than current (or first fix)
+  if(userPos && userPos.acc && acc >= userPos.acc && !isIPFallback) return;
+
+  userPos={lat,lng,acc};
+
+  const zoom = isIPFallback ? 12 : (acc<20?18 : acc<50?17 : acc<150?16 : acc<500?15 : 14);
+  const accLabel = isIPFallback ? '~città' : `±${acc}m`;
+  const popupLabel = isIPFallback
+    ? `<b>📍 Posizione approssimativa</b><br><small>Basata sull'IP (~${Math.round(acc/1000)}km)</small>`
+    : `<b>${t('youAreHere')}</b><br><small>${accLabel}</small>`;
+
+  if(!userMarker){
+    const dotHtml = isIPFallback
+      ? `<div style="width:18px;height:18px;background:#F97316;border-radius:50%;border:2.5px solid #fff;box-shadow:0 2px 8px rgba(249,115,22,.5);opacity:.7"></div>`
+      : `<div class="user-dot-wrap"><div class="user-dot-pulse"></div><div class="user-dot"></div></div>`;
+    const icon=L.divIcon({className:'',html:dotHtml,iconSize:[20,20],iconAnchor:[10,10]});
+    userMarker=L.marker([lat,lng],{icon,zIndexOffset:1000}).addTo(map);
+    userMarker.bindPopup(popupLabel,{closeButton:false,offset:[0,-8]});
+    map.setView([lat,lng],zoom);
+    const msg=isIPFallback?'🌐 Posizione approssimativa (IP). Per la posizione esatta usa GPS o Google Maps.':(`${t('geoFound')} ${accLabel}`);
+    showToast(msg, isIPFallback?7000:3000);
+    if(!isIPFallback){
+      document.getElementById('locateBtn').classList.add('tracking');
+      isTracking=true;
+    }
+    updateNearbyArtists();
+  } else {
+    userMarker.setLatLng([lat,lng]);
+    userMarker.setPopupContent(popupLabel);
+    if(!isIPFallback){
+      // Replace orange IP dot with blue GPS dot
+      const icon=L.divIcon({className:'',html:`<div class="user-dot-wrap"><div class="user-dot-pulse"></div><div class="user-dot"></div></div>`,iconSize:[20,20],iconAnchor:[10,10]});
+      userMarker.setIcon(icon);
+      if(isTracking) map.panTo([lat,lng],{animate:true,duration:0.5});
+      if(acc<50 && map.getZoom()<17) map.setZoom(17);
+    }
+  }
+
+  if(userCircle){
+    userCircle.setLatLng([lat,lng]);
+    userCircle.setRadius(acc);
+  } else {
+    userCircle=L.circle([lat,lng],{
+      radius:acc,
+      color: isIPFallback?'#F97316':'#1A73E8',
+      fillColor: isIPFallback?'#F97316':'#1A73E8',
+      fillOpacity:0.06,weight:1.5,opacity:0.35,
+      dashArray: isIPFallback?'6 4':null
+    }).addTo(map);
+  }
+  updateNearbyArtists();
+}
+
+function onGeoError(err){
+  const msgs={1:t('geoErr1'),2:t('geoErr2'),3:t('geoErr3')};
+  showToast('⚠️ '+(msgs[err.code]||t('geoErr2')),5000);
+  document.getElementById('locateBtn').classList.remove('tracking');
+}
+
+function centerOnUser(){
+  if(!userPos){
+    showToast(t('geoSearching'));
+    if(!watchId) startGeolocation();
+    return;
+  }
+  isTracking=true;
+  map.setView([userPos.lat,userPos.lng],16,{animate:true});
+  document.getElementById('locateBtn').classList.add('tracking');
+  document.getElementById('locateBtn').textContent='🔵';
+  setTimeout(()=>document.getElementById('locateBtn').textContent='📍',2000);
+  userMarker?.openPopup();
+  showToast(t('geoCentered'));
+  updateNearbyArtists();
+}
+
+// Stop auto-follow when user drags map
+function initMapDragStop(){
+  map.on('dragstart',()=>{
+    isTracking=false;
+    document.getElementById('locateBtn').classList.remove('tracking');
+  });
+}
+
+function haversine(lat1,lng1,lat2,lng2){
+  const R=6371000,dLat=(lat2-lat1)*Math.PI/180,dLng=(lng2-lng1)*Math.PI/180;
+  const a=Math.sin(dLat/2)**2+Math.cos(lat1*Math.PI/180)*Math.cos(lat2*Math.PI/180)*Math.sin(dLng/2)**2;
+  return R*2*Math.atan2(Math.sqrt(a),Math.sqrt(1-a));
+}
+
+function formatDist(m){return m<1000?Math.round(m)+'m':(m/1000).toFixed(1)+'km';}
+
+function updateNearbyArtists(){
+  if(!userPos) return;
+  // Add distance to each artist and re-render list if visible
+  ARTISTS.forEach(a=>{a._dist=haversine(userPos.lat,userPos.lng,a.lat,a.lng);});
+  if(vMode==='lista') renderList();
+}
+function renderMarkers(){
+  markers.forEach(m=>map.removeLayer(m));markers=[];
+  getFA().forEach(a=>{
+    const col=gc(a.category);
+    const icon=L.divIcon({className:'',html:`<div class="custom-marker" style="background:${col}" title="${a.name} (${a.pseudo})"></div>`,iconSize:[20,20],iconAnchor:[10,10]});
+    const m=L.marker([a.lat,a.lng],{icon}).addTo(map);
+    m.on('click',(e)=>{e.originalEvent.stopPropagation();showPopup(a);});
+    markers.push(m);
+  });
+}
+function showPopup(a){
+  const p=document.getElementById('artistPopup');
+  document.getElementById('popupDot').style.background=gc(a.category);
+  document.getElementById('popupName').textContent=a.name;
+  const dist=a._dist?` · 🧭 ${formatDist(a._dist)}`:'';
+  document.getElementById('popupZone').textContent=gi(a.category)+' '+a.pseudo+' · '+a.zone+dist;
+  document.getElementById('popupRating').textContent=a.rating;
+  document.getElementById('popupOpenBtn').onclick=()=>openArtistModal(a.id);
+  p.classList.add('show');
+}
+function closePopup(){document.getElementById('artistPopup').classList.remove('show');}
+
+function renderList(){
+  const lv=document.getElementById('listView');
+  if(aTab==='artisti'){
+    const f=getFA();
+    if(!f.length){lv.innerHTML=`<div class="empty-state"><div class="empty-icon">🎨</div><span>${t('emptyArtists')}</span></div>`;return;}
+    lv.innerHTML=f.map(a=>`
+      <div class="artist-card" onclick="openArtistModal('${a.id}')">
+        <div class="card-avatar" style="background:${gc(a.category)}22">${gi(a.category)}</div>
+        <div class="card-info">
+          <div class="card-name">${a.name}${a._dist&&a._dist<2000?`<span class="nearby-badge">${t('nearby')}</span>`:''}</div>
+          <div class="card-pseudo">${a.pseudo}</div>
+          <div class="card-zone">📍 ${a.zone}</div>
+          ${a._dist?`<div class="dist-text">🧭 ${formatDist(a._dist)} ${t('fromYou')}</div>`:''}
+          <div class="card-rating"><span class="star">★</span> ${a.rating} <span style="color:#BFB8AE">(${a.reviews})</span></div>
+        </div>
+        <div class="card-dot" style="background:${gc(a.category)}"></div>
+        <span class="card-chevron">›</span>
+      </div>`).join('');
+  }else{
+    const f=getFE();
+    if(!f.length){lv.innerHTML=`<div class="empty-state"><div class="empty-icon">📅</div><span>${t('emptyExhibitions')}</span></div>`;return;}
+    lv.innerHTML=f.map(e=>{const d=new Date(e.date);return`
+      <div class="exh-card">
+        <div class="ex-date-box" style="background:${gc(e.category)}">
+          <div class="ex-date-day">${d.getDate()}</div>
+          <div class="ex-date-month">${d.toLocaleString('it-IT',{month:'short'}).toUpperCase()}</div>
+        </div>
+        <div class="ex-info">
+          <div class="ex-title">${e.title}</div>
+          <div class="ex-artist">${gi(e.category)} ${e.artist}</div>
+          <div class="ex-location">📍 ${e.location}</div>
+          <div class="ex-tags"><span class="tag tag-time">⏰ ${e.time}</span>${e.free?`<span class="tag tag-free">${t('free')}</span>`:''}</div>
+        </div>
+      </div>`;}).join('');
+  }
+}
+
+function getFA(){const q=document.getElementById('searchInput').value.toLowerCase();return ARTISTS.filter(a=>{const mc=sCat==='tutti'||a.category===sCat;const mq=!q||a.name.toLowerCase().includes(q)||a.pseudo.toLowerCase().includes(q)||a.zone.toLowerCase().includes(q);return mc&&mq;});}
+function getFE(){const q=document.getElementById('searchInput').value.toLowerCase();return EXHIBITIONS.filter(e=>{const mc=sCat==='tutti'||e.category===sCat;const mq=!q||e.title.toLowerCase().includes(q)||e.location.toLowerCase().includes(q);return mc&&mq;});}
+function applyFilters(){if(vMode==='mappa')renderMarkers();else renderList();updateFooter();}
+function updateFooter(){document.getElementById('footer').innerHTML=t('footer',getFA().length,getFE().length);}
+
+function getBio(a){
+  const b=a.bio;
+  if(typeof b==='string') return b;
+  return b[currentLang]||b['en']||b['it']||'';
+}
+function getRevText(r){
+  const tx=r.text;
+  if(typeof tx==='string') return tx;
+  return tx[currentLang]||tx['en']||tx['it']||'';
+}
+
+function openArtistModal(id){
+  const a=ARTISTS.find(x=>x.id===id);if(!a)return;
+  const cat=CATS.find(c=>c.id===a.category);
+  if(!REVS[id])REVS[id]=[...(a.reviews_data||[])];
+  const soc=`<div class="social-links">
+    ${a.instagram?`<a class="social-link social-ig" href="${a.instagram}" target="_blank">📸 ${a.igHandle||t('socialIG')}</a>`:''}
+    ${a.website?`<a class="social-link social-web" href="${a.website}" target="_blank">🌐 ${t('socialWeb')}</a>`:''}
+  </div>`;
+  document.getElementById('artistModalBody').innerHTML=`
+    <div class="artist-detail-avatar" style="background:${cat.color}22">${cat.icon}</div>
+    <div class="artist-detail-name">${a.name}</div>
+    <div class="artist-pseudo">${a.pseudo}</div>
+    <div class="artist-detail-rating">
+      ${[1,2,3,4,5].map(s=>`<span class="${s<=Math.round(a.rating)?'sf':'se'}">★</span>`).join('')}
+      <span class="rating-text">${a.rating}</span>
+      <span class="rating-count">(${a.reviews} ${t('reviews').toLowerCase()})</span>
+    </div>
+    <div class="cat-badge" style="background:${cat.color}">${cat.icon} ${gl(cat.id)}</div>
+    <div class="detail-location">📍 ${a.zone}, ${a.city}</div>
+    ${soc}
+    <div class="divider"></div>
+    <div class="section-title">${t('bio')}</div>
+    <div class="bio-text">${getBio(a)}</div>
+    <div class="divider"></div>
+    <div class="section-title">${t('performanceZones')}</div>
+    <div class="perf-pills">${a.performances.map(p=>`<div class="perf-pill">📍 ${p}</div>`).join('')}</div>
+    <div class="divider"></div>
+    <div class="section-title">${t('reviews')} (${REVS[id].length})</div>
+    <div id="rvList">${REVS[id].map(rCard).join('')}</div>
+    <div class="divider"></div>
+    <div class="section-title">${t('leaveReview')}</div>
+    <div class="star-picker" id="spicker">
+      ${[1,2,3,4,5].map(s=>`<span class="star-pick" onclick="setRR(${s},'${id}')" id="sp${s}">★</span>`).join('')}
+    </div>
+    <textarea class="review-textarea" id="rvTxt" rows="3" placeholder="${t('reviewPlaceholder')}"></textarea>
+    <button class="submit-btn" onclick="submitRev('${id}')">${t('sendReview')}</button>`;
+  revRating=0;
+  document.getElementById('artistModal').dataset.artistId=id;
+  document.getElementById('artistModal').classList.add('show');
+}
+function rCard(r){return`<div class="review-card">
+  <div class="review-header">
+    <div class="review-avatar">${r.author[0]}</div>
+    <div style="flex:1"><div class="review-author">${r.author}</div><div class="review-date">${r.date}</div></div>
+    <div class="review-stars">${[1,2,3,4,5].map(s=>`<span style="color:${s<=r.rating?'#E8A000':'#EAE5DC'}">★</span>`).join('')}</div>
+  </div>
+  <div class="review-text">${getRevText(r)}</div>
+</div>`;}
+function setRR(v,id){revRating=v;for(let i=1;i<=5;i++){const s=document.getElementById(`sp${i}`);if(s)s.classList.toggle('active',i<=v);}}
+function submitRev(aid){
+  const txt=document.getElementById('rvTxt').value.trim();
+  if(!txt||revRating===0){alert(t('alertReview'));return;}
+  REVS[aid]=[{author:'Tu',rating:revRating,text:txt,date:'adesso'},...REVS[aid]];
+  document.getElementById('rvList').innerHTML=REVS[aid].map(rCard).join('');
+  document.getElementById('rvTxt').value='';revRating=0;
+  [1,2,3,4,5].forEach(i=>{const s=document.getElementById(`sp${i}`);if(s)s.classList.remove('active');});
+}
+function closeArtistModal(){document.getElementById('artistModal').classList.remove('show');}
+
+function openAddModal(){addType='artista';addCat='';document.getElementById('addTypeArtista').classList.add('active');document.getElementById('addTypeEsibizione').classList.remove('active');renderAddForm();document.getElementById('addModal').classList.add('show');}
+function closeAddModal(){document.getElementById('addModal').classList.remove('show');}
+function switchAddType(t){addType=t;addCat='';document.getElementById('addTypeArtista').classList.toggle('active',t==='artista');document.getElementById('addTypeEsibizione').classList.toggle('active',t==='esibizione');renderAddForm();}
+function renderAddForm(){
+  const cats=CATS.filter(c=>c.id!=='tutti');
+  const cg=`<div class="form-field"><label class="form-label">${t('catLabel')}</label><div class="cat-grid">${cats.map(c=>`<div class="cat-option ${addCat===c.id?'selected':''}" style="${addCat===c.id?`border-color:${c.color};background:${c.color}18;color:${c.color}`:''}" onclick="selAC('${c.id}')">${c.icon} ${t(c.labelKey)}</div>`).join('')}</div></div>`;
+  document.getElementById('addFormFields').innerHTML=addType==='artista'?`
+    <div class="form-field"><label class="form-label">${t('nameLabel')}</label><input class="form-input" id="fn" placeholder="${t('namePlaceholder')}"></div>
+    <div class="form-field"><label class="form-label">${t('pseudoLabel')}</label><input class="form-input" id="fp" placeholder="${t('pseudoPlaceholder')}"></div>
+    <div class="form-field"><label class="form-label">${t('zoneLabel')}</label><input class="form-input" id="fz" placeholder="${t('zonePlaceholder')}"></div>
+    <div class="form-field"><label class="form-label">${t('bioLabel')}</label><textarea class="form-input review-textarea" id="fb" rows="3" placeholder="${t('bioPlaceholder')}"></textarea></div>
+    ${cg}`:`
+    <div class="form-field"><label class="form-label">${t('titleLabel')}</label><input class="form-input" id="ft" placeholder="${t('titlePlaceholder')}"></div>
+    <div class="form-field"><label class="form-label">${t('dateLabel')}</label><input class="form-input" id="fd" type="date"></div>
+    <div class="form-field"><label class="form-label">${t('timeLabel')}</label><input class="form-input" id="fh" type="time" value="18:00"></div>
+    <div class="form-field"><label class="form-label">${t('locationLabel')}</label><input class="form-input" id="fl" placeholder="${t('locationPlaceholder')}"></div>
+    ${cg}`;
+}
+function selAC(id){addCat=id;renderAddForm();}
+function submitAdd(){
+  if(addType==='artista'){
+    const n=document.getElementById('fn')?.value.trim(),z=document.getElementById('fz')?.value.trim();
+    if(!n||!z||!addCat){alert(t('alertFillArtist'));return;}
+    ARTISTS.push({id:Date.now().toString(),name:n,pseudo:document.getElementById('fp')?.value.trim()||n,category:addCat,bio:document.getElementById('fb')?.value.trim()||'',rating:5,reviews:0,lat:41.9+(Math.random()-.5)*.06,lng:12.48+(Math.random()-.5)*.06,city:'Roma',zone:z,performances:[z],instagram:null,website:null,igHandle:null,reviews_data:[]});
+    alert(t('alertAddedArtist',n));
+  }else{
+    const t2=document.getElementById('ft')?.value.trim(),d=document.getElementById('fd')?.value,l=document.getElementById('fl')?.value.trim();
+    if(!t2||!d||!l||!addCat){alert(t('alertFillExh'));return;}
+    EXHIBITIONS.push({id:'e'+Date.now(),title:t2,artist:'Da definire',artistId:null,category:addCat,date:d,time:document.getElementById('fh')?.value||'00:00',location:l,lat:41.9,lng:12.48,free:true});
+    alert(t('alertAddedExh',t2));
+  }
+  closeAddModal();applyFilters();
+}
+document.getElementById('artistModal').addEventListener('click',function(e){if(e.target===this)closeArtistModal();});
+document.getElementById('addModal').addEventListener('click',function(e){if(e.target===this)closeAddModal();});
+</script>
+<!-- LANGUAGE PORTAL (fixed, never clipped) -->
+<div id="langPortal"></div>
+
+<!-- PWA Install Banner -->
+<div id="installBanner" style="display:none;position:fixed;bottom:0;left:0;right:0;z-index:99998;background:linear-gradient(135deg,#1A1025,#2D1B4E);color:#fff;padding:14px 20px;box-shadow:0 -4px 20px rgba(0,0,0,.3);animation:slideUp .3s ease">
+  <div style="display:flex;align-items:center;gap:12px;max-width:480px;margin:0 auto">
+    <span style="font-size:28px">🎨</span>
+    <div style="flex:1">
+      <div style="font-family:'Bebas Neue',sans-serif;font-size:16px;letter-spacing:1px">INSTALLA STREETART ROMA</div>
+      <div style="font-size:12px;opacity:.8;margin-top:2px">Aggiungila alla schermata home — funziona offline</div>
+    </div>
+    <button onclick="installPWA()" style="background:#E8A000;color:#1A1025;border:none;border-radius:8px;padding:8px 16px;font-weight:700;font-size:13px;cursor:pointer;flex-shrink:0">Installa</button>
+    <button onclick="document.getElementById('installBanner').style.display='none'" style="background:none;border:none;color:#fff;font-size:20px;cursor:pointer;opacity:.7;padding:4px">✕</button>
+  </div>
+</div>
+
+<style>
+@keyframes slideUp{from{transform:translateY(100%)}to{transform:translateY(0)}}
+</style>
+
+<script>
+// ── PWA INSTALL ──
+let deferredPrompt = null;
+
+window.addEventListener('beforeinstallprompt', e => {
+  e.preventDefault();
+  deferredPrompt = e;
+  // Show banner after 3 seconds
+  setTimeout(() => {
+    const banner = document.getElementById('installBanner');
+    if (banner) banner.style.display = 'flex';
+  }, 3000);
+});
+
+function installPWA() {
+  if (!deferredPrompt) {
+    // Fallback: show manual instructions
+    alert('Per installare:\n1. Apri questo link in Chrome Android\n2. Tocca ⋮ (menu in alto a destra)\n3. Seleziona "Aggiungi alla schermata Home"\n4. Conferma — apparirà come app!');
+    return;
+  }
+  deferredPrompt.prompt();
+  deferredPrompt.userChoice.then(choice => {
+    if (choice.outcome === 'accepted') {
+      document.getElementById('installBanner').style.display = 'none';
+    }
+    deferredPrompt = null;
+  });
+}
+
+window.addEventListener('appinstalled', () => {
+  document.getElementById('installBanner').style.display = 'none';
+  deferredPrompt = null;
+});
+
+// ── SERVICE WORKER (cache offline) ──
+if ('serviceWorker' in navigator) {
+  const swCode = `
+const CACHE = 'streetart-roma-v1';
+const ASSETS = [
+  'https://fonts.googleapis.com/css2?family=Bebas+Neue&family=DM+Sans:ital,wght@0,400;0,500;0,600;0,700;1,400&display=swap',
+  'https://unpkg.com/leaflet@1.9.4/dist/leaflet.css',
+  'https://unpkg.com/leaflet@1.9.4/dist/leaflet.js',
+];
+self.addEventListener('install', e => {
+  e.waitUntil(caches.open(CACHE).then(c => c.addAll(ASSETS).catch(()=>{})));
+  self.skipWaiting();
+});
+self.addEventListener('activate', e => {
+  e.waitUntil(caches.keys().then(keys =>
+    Promise.all(keys.filter(k => k !== CACHE).map(k => caches.delete(k)))
+  ));
+  self.clients.claim();
+});
+self.addEventListener('fetch', e => {
+  if (e.request.method !== 'GET') return;
+  e.respondWith(
+    caches.match(e.request).then(cached => {
+      if (cached) return cached;
+      return fetch(e.request).then(res => {
+        if (res && res.status === 200 && e.request.url.startsWith('https://')) {
+          const clone = res.clone();
+          caches.open(CACHE).then(c => c.put(e.request, clone));
+        }
+        return res;
+      }).catch(() => cached);
+    })
+  );
+});
+  `;
+  const blob = new Blob([swCode], {type: 'application/javascript'});
+  const swUrl = URL.createObjectURL(blob);
+  navigator.serviceWorker.register(swUrl, {scope: '/'})
+    .catch(() => {}); // silently fail if blocked (file://)
+}
+</script>
+
+</body>
+</html>
