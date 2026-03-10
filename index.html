@@ -5615,31 +5615,31 @@ async function registerWithEmail() {
   finally { document.getElementById('authSubmitBtn').disabled = false; }
 }
 
-async function loginWithGoogle() {
-  showAuthError("⏳ Connessione con Google...");
-  const ready = await ensureFirebase();
-  if (!ready) { showAuthError("❌ Errore di connessione. Controlla la rete e riprova."); return; }
+function loginWithGoogle() {
+  // IMPORTANTE: nessun await prima di signInWithPopup — il browser richiede
+  // che il popup venga aperto in modo sincrono dal click dell'utente
+  if (!auth) { showAuthError("❌ Firebase non pronto. Ricarica la pagina."); return; }
   const provider = new firebase.auth.GoogleAuthProvider();
   provider.addScope('email');
   provider.addScope('profile');
-  try {
-    // Prova prima con popup (funziona su browser desktop standard)
-    const result = await auth.signInWithPopup(provider);
-    if (result.user) {
-      await _saveGoogleUser(result.user);
-      closeAuthModal();
-      showToast('👋 Benvenuto/a con Google, ' + (result.user.displayName || '').split(' ')[0] + '!');
-      setTimeout(() => loadCommunityData(), 300);
-    }
-  } catch(e) {
-    if (e.code === 'auth/operation-not-supported-in-this-environment' ||
-        e.code === 'auth/popup-blocked') {
-      // Fallback: redirect (per mobile o browser con popup bloccati)
-      try { await auth.signInWithRedirect(provider); } catch(e2) { showAuthError(authErrMsg(e2.code)); }
-    } else if (e.code !== 'auth/popup-closed-by-user' && e.code !== 'auth/cancelled-popup-request') {
-      showAuthError(authErrMsg(e.code));
-    }
-  }
+  showAuthError("⏳ Apertura Google...");
+  auth.signInWithPopup(provider)
+    .then(async result => {
+      if (result.user) {
+        await _saveGoogleUser(result.user);
+        closeAuthModal();
+        showToast('👋 Benvenuto/a con Google, ' + (result.user.displayName || '').split(' ')[0] + '!');
+        setTimeout(() => loadCommunityData(), 300);
+      }
+    })
+    .catch(e => {
+      if (e.code === 'auth/popup-closed-by-user' || e.code === 'auth/cancelled-popup-request') {
+        showAuthError('');
+      } else {
+        showAuthError(authErrMsg(e.code));
+        console.warn('Google login error:', e.code, e.message);
+      }
+    });
 }
 
 // Salva/aggiorna dati utente Google su Firestore
