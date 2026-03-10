@@ -5314,7 +5314,7 @@ document.getElementById('addModal').addEventListener('click',function(e){if(e.ta
 //  ╚══════════════════════════════════════════════════════════════╝
 const firebaseConfig = {
   apiKey: "AIzaSyBJ2E9e9nirLQZd8uFzwrXak2njC3vmuOc",
-  authDomain: "streetart-italia.firebaseapp.com",
+  authDomain: "melasento.github.io",
   projectId: "streetart-italia",
   storageBucket: "streetart-italia.firebasestorage.app",
   messagingSenderId: "113201968731",
@@ -5669,8 +5669,15 @@ function loginWithGoogle() {
   const provider = new firebase.auth.GoogleAuthProvider();
   provider.addScope('email');
   provider.addScope('profile');
-  // Usa sempre popup — funziona su desktop, mobile browser e PWA installata.
-  // signInWithRedirect su GitHub Pages non funziona per restrizioni cross-origin storage.
+  // PWA installata (standalone): usa redirect — popup bloccati dal SO.
+  // Browser normale: usa popup.
+  const isPWA = window.navigator.standalone === true
+    || window.matchMedia('(display-mode: standalone)').matches;
+  if (isPWA) {
+    showAuthError('⏳ Reindirizzamento a Google...');
+    auth.signInWithRedirect(provider).catch(e => showAuthError(authErrMsg(e.code)));
+    return;
+  }
   window._googlePopupOpen = true;
   showAuthError('⏳ Apertura Google...');
   auth.signInWithPopup(provider)
