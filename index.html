@@ -893,6 +893,33 @@ body{font-family:'DM Sans',sans-serif;background:var(--paper);color:var(--ink);h
   </div>
 </div>
 
+<!-- ══ EXHIBITION DETAIL MODAL ══ -->
+<div id="exhModal" style="display:none;position:fixed;inset:0;z-index:9000;background:rgba(15,12,8,.85);backdrop-filter:blur(6px);overflow-y:auto">
+  <div style="max-width:560px;margin:20px auto;background:#FAF6EF;border-radius:20px;overflow:hidden;position:relative">
+    <!-- header band -->
+    <div id="exhModalHeader" style="padding:22px 20px 16px;position:relative">
+      <button onclick="closeExhModal()" style="position:absolute;right:16px;top:16px;background:rgba(255,255,255,.25);border:none;color:#fff;font-size:22px;width:36px;height:36px;border-radius:50%;cursor:pointer;line-height:1">✕</button>
+      <div id="exhModalCat" style="font-size:11px;font-weight:700;letter-spacing:1.5px;text-transform:uppercase;opacity:.8;margin-bottom:6px"></div>
+      <div id="exhModalTitle" style="font-family:'Bebas Neue',sans-serif;font-size:28px;color:#fff;line-height:1.1"></div>
+      <div id="exhModalArtist" style="color:rgba(255,255,255,.85);font-size:14px;margin-top:4px"></div>
+    </div>
+    <!-- photo gallery -->
+    <div id="exhModalGallery" style="position:relative;background:#1a1512;min-height:200px;display:flex;align-items:center;justify-content:center">
+      <div id="exhGalleryInner" style="width:100%;text-align:center"></div>
+    </div>
+    <!-- body -->
+    <div style="padding:20px">
+      <!-- info chips -->
+      <div id="exhModalMeta" style="display:flex;flex-wrap:wrap;gap:8px;margin-bottom:16px"></div>
+      <!-- description -->
+      <div id="exhModalDesc" style="color:#3D3530;font-size:15px;line-height:1.6;margin-bottom:20px"></div>
+      <!-- artist link -->
+      <div id="exhModalArtistLink"></div>
+    </div>
+  </div>
+</div>
+
+
 <script>
 // ══════════════════════════════════════════
 //  I18N — MULTILANGUAGE SYSTEM
@@ -7742,7 +7769,8 @@ function closeExhModal(){
   document.getElementById('exhModal').style.display='none';
   document.body.style.overflow='';
 }
-document.getElementById('exhModal').addEventListener('click', function(ev){
+const _exhModal = document.getElementById('exhModal');
+if (_exhModal) _exhModal.addEventListener('click', function(ev){
   if(ev.target===this) closeExhModal();
 });
 
@@ -8111,32 +8139,6 @@ async function compressImageFromDataURL(dataURL, maxPx, quality){
 
 </script>
 
-
-<!-- ══ EXHIBITION DETAIL MODAL ══ -->
-<div id="exhModal" style="display:none;position:fixed;inset:0;z-index:9000;background:rgba(15,12,8,.85);backdrop-filter:blur(6px);overflow-y:auto">
-  <div style="max-width:560px;margin:20px auto;background:#FAF6EF;border-radius:20px;overflow:hidden;position:relative">
-    <!-- header band -->
-    <div id="exhModalHeader" style="padding:22px 20px 16px;position:relative">
-      <button onclick="closeExhModal()" style="position:absolute;right:16px;top:16px;background:rgba(255,255,255,.25);border:none;color:#fff;font-size:22px;width:36px;height:36px;border-radius:50%;cursor:pointer;line-height:1">✕</button>
-      <div id="exhModalCat" style="font-size:11px;font-weight:700;letter-spacing:1.5px;text-transform:uppercase;opacity:.8;margin-bottom:6px"></div>
-      <div id="exhModalTitle" style="font-family:'Bebas Neue',sans-serif;font-size:28px;color:#fff;line-height:1.1"></div>
-      <div id="exhModalArtist" style="color:rgba(255,255,255,.85);font-size:14px;margin-top:4px"></div>
-    </div>
-    <!-- photo gallery -->
-    <div id="exhModalGallery" style="position:relative;background:#1a1512;min-height:200px;display:flex;align-items:center;justify-content:center">
-      <div id="exhGalleryInner" style="width:100%;text-align:center"></div>
-    </div>
-    <!-- body -->
-    <div style="padding:20px">
-      <!-- info chips -->
-      <div id="exhModalMeta" style="display:flex;flex-wrap:wrap;gap:8px;margin-bottom:16px"></div>
-      <!-- description -->
-      <div id="exhModalDesc" style="color:#3D3530;font-size:15px;line-height:1.6;margin-bottom:20px"></div>
-      <!-- artist link -->
-      <div id="exhModalArtistLink"></div>
-    </div>
-  </div>
-</div>
 
 <!-- ── PHOTO LIGHTBOX ── -->
 <div id="photoLightbox" onclick="closePhotoLightbox()" style="display:none;position:fixed;inset:0;z-index:99999;background:rgba(0,0,0,.92);align-items:center;justify-content:center">
