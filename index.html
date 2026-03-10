@@ -5650,8 +5650,25 @@ const GOOGLE_CLIENT_ID = '113201968731-ah7ia03tbatspfoojo4japqggcas15ud.apps.goo
 
 function loginWithGoogle() {
   if (!auth) { showAuthError("❌ Firebase non pronto. Ricarica la pagina."); return; }
+
+  const isMobile = /Android|iPhone|iPad|iPod|Mobile/i.test(navigator.userAgent);
+
+  // ── MOBILE: Firebase redirect (va su firebaseapp.com che ha il handler) ──
+  if (isMobile) {
+    const provider = new firebase.auth.GoogleAuthProvider();
+    provider.addScope('email');
+    provider.addScope('profile');
+    showAuthError('⏳ Reindirizzamento a Google...');
+    auth.signInWithRedirect(provider).catch(e => showAuthError(authErrMsg(e.code)));
+    return;
+  }
+
+  // ── DESKTOP: GIS popup (nessun /__/auth/handler) ──
   if (typeof google === 'undefined' || !google.accounts) {
-    showAuthError("❌ Google Identity Services non caricato. Riprova tra un secondo.");
+    // GIS non ancora caricato → fallback redirect
+    const provider = new firebase.auth.GoogleAuthProvider();
+    showAuthError('⏳ Reindirizzamento a Google...');
+    auth.signInWithRedirect(provider).catch(e => showAuthError(authErrMsg(e.code)));
     return;
   }
   showAuthError('⏳ Apertura Google...');
@@ -5660,11 +5677,8 @@ function loginWithGoogle() {
     scope: 'email profile openid',
     callback: async (tokenResponse) => {
       if (tokenResponse.error) {
-        if (tokenResponse.error === 'access_denied') {
-          showAuthError('');
-        } else {
-          showAuthError('❌ Accesso Google non riuscito: ' + tokenResponse.error);
-        }
+        if (tokenResponse.error === 'access_denied') { showAuthError(''); }
+        else { showAuthError('❌ Accesso Google non riuscito: ' + tokenResponse.error); }
         return;
       }
       try {
@@ -5683,11 +5697,8 @@ function loginWithGoogle() {
       }
     },
     error_callback: (err) => {
-      if (err.type !== 'popup_closed') {
-        showAuthError('❌ Errore Google: ' + (err.type || 'sconosciuto'));
-      } else {
-        showAuthError('');
-      }
+      if (err.type !== 'popup_closed') { showAuthError('❌ Errore Google: ' + (err.type || 'sconosciuto')); }
+      else { showAuthError(''); }
     }
   }).requestAccessToken({ prompt: 'select_account' });
 }
