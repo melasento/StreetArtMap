@@ -5691,11 +5691,11 @@ function loginWithGoogle() {
       if (e.code === 'auth/popup-closed-by-user' || e.code === 'auth/cancelled-popup-request') {
         showAuthError('');
       } else if (e.code === 'auth/popup-blocked' || e.code === 'auth/operation-not-supported-in-this-environment') {
-        // Fallback redirect se popup bloccato dal browser
-        showAuthError('⏳ Popup bloccato, reindirizzamento a Google...');
-        auth.signInWithRedirect(provider).catch(e2 => showAuthError(authErrMsg(e2.code)));
+        // Popup bloccato dal browser — mostra istruzioni chiare, NON usare redirect su desktop
+        showAuthError('⚠️ Popup bloccato. Clicca sull\'icona 🔒 nella barra degli indirizzi → consenti i popup per questo sito → riprova.');
       } else {
         showAuthError(authErrMsg(e.code));
+        console.warn('Google login error:', e.code, e.message);
       }
     });
 }
@@ -6914,6 +6914,14 @@ function flyToSighting(lat, lng, sightingId) {
 // Apri il modal dettaglio segnalazione (con commenti)
 async function openSightingDetail(sightingId) {
   if (!db) return;
+  // On mobile, iOS Safari ignores z-index when a parent modal has -webkit-overflow-scrolling:touch.
+  // Solution: temporarily hide profileModal and restore it when sightingDetail closes.
+  const profileModal = document.getElementById('profileModal');
+  const profileWasOpen = profileModal.classList.contains('show');
+  if (profileWasOpen) {
+    profileModal.style.visibility = 'hidden';
+    window._sightingDetailRestoreProfile = true;
+  }
   const modal = document.getElementById('sightingDetailModal');
   const body  = document.getElementById('sightingDetailBody');
   const title = document.getElementById('sightingDetailTitle');
@@ -7024,6 +7032,11 @@ async function openSightingDetail(sightingId) {
 
 function closeSightingDetail() {
   document.getElementById('sightingDetailModal').classList.remove('show');
+  // Restore profileModal if it was hidden for mobile z-index fix
+  if (window._sightingDetailRestoreProfile) {
+    window._sightingDetailRestoreProfile = false;
+    document.getElementById('profileModal').style.visibility = '';
+  }
 }
 
 // Invia un commento a una segnalazione
