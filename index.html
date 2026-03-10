@@ -5660,7 +5660,11 @@ function loginWithGoogle() {
       }
     })
     .catch(e => {
-      if (e.code === 'auth/popup-closed-by-user' || e.code === 'auth/cancelled-popup-request') {
+      if (e.code === 'auth/popup-blocked' || e.code === 'auth/operation-not-supported-in-this-environment') {
+        // Popup bloccato dal browser (es. mobile, browser restrittivi) → fallback redirect
+        showAuthError('⏳ Reindirizzamento a Google...');
+        auth.signInWithRedirect(provider).catch(e2 => showAuthError(authErrMsg(e2.code)));
+      } else if (e.code === 'auth/popup-closed-by-user' || e.code === 'auth/cancelled-popup-request') {
         showAuthError('');
       } else {
         showAuthError(authErrMsg(e.code));
