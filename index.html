@@ -5675,10 +5675,12 @@ function loginWithGoogle() {
     auth.signInWithRedirect(provider).catch(e => showAuthError(authErrMsg(e.code)));
     return;
   }
-  // Desktop: popup
+  // Desktop: popup — disable click-to-close while popup is in flight
+  window._googlePopupOpen = true;
   showAuthError('⏳ Apertura Google...');
   auth.signInWithPopup(provider)
     .then(async result => {
+      window._googlePopupOpen = false;
       if (result.user) {
         await _saveGoogleUser(result.user);
         closeAuthModal();
@@ -5687,6 +5689,7 @@ function loginWithGoogle() {
       }
     })
     .catch(e => {
+      window._googlePopupOpen = false;
       if (e.code === 'auth/popup-closed-by-user' || e.code === 'auth/cancelled-popup-request') {
         showAuthError('');
       } else {
@@ -7242,7 +7245,7 @@ async function saveEditSegnalazione() {
 }
 
 // ── Modal overlay clicks ──
-document.getElementById('authModal').addEventListener('click', function(e){ if(e.target===this) closeAuthModal(); });
+document.getElementById('authModal').addEventListener('click', function(e){ if(e.target===this && !window._googlePopupOpen) closeAuthModal(); });
 document.getElementById('profileModal').addEventListener('click', function(e){ if(e.target===this) closeProfileModal(); });
 document.getElementById('segnalaModal').addEventListener('click', function(e){ if(e.target===this) closeSegnalaModal(); });
 document.getElementById('sightingDetailModal').addEventListener('click', function(e){ if(e.target===this) closeSightingDetail(); });
