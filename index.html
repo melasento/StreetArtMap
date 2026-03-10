@@ -5669,16 +5669,8 @@ function loginWithGoogle() {
   const provider = new firebase.auth.GoogleAuthProvider();
   provider.addScope('email');
   provider.addScope('profile');
-  // Se l'app è installata come PWA (standalone), i popup sono bloccati dal SO.
-  // In quel caso usa signInWithRedirect. In tutti gli altri casi usa popup.
-  const isPWA = window.navigator.standalone === true
-    || window.matchMedia('(display-mode: standalone)').matches;
-  if (isPWA) {
-    showAuthError('⏳ Reindirizzamento a Google...');
-    auth.signInWithRedirect(provider).catch(e => showAuthError(authErrMsg(e.code)));
-    return;
-  }
-  // Browser normale: popup
+  // Usa sempre popup — funziona su desktop, mobile browser e PWA installata.
+  // signInWithRedirect su GitHub Pages non funziona per restrizioni cross-origin storage.
   window._googlePopupOpen = true;
   showAuthError('⏳ Apertura Google...');
   auth.signInWithPopup(provider)
@@ -5693,15 +5685,7 @@ function loginWithGoogle() {
     })
     .catch(e => {
       window._googlePopupOpen = false;
-      const useRedirect = [
-        'auth/popup-blocked',
-        'auth/web-storage-unsupported',
-        'auth/operation-not-supported-in-this-environment'
-      ].includes(e.code);
-      if (useRedirect) {
-        showAuthError('⏳ Reindirizzamento a Google...');
-        auth.signInWithRedirect(provider).catch(e2 => showAuthError(authErrMsg(e2.code)));
-      } else if (e.code === 'auth/popup-closed-by-user' || e.code === 'auth/cancelled-popup-request') {
+      if (e.code === 'auth/popup-closed-by-user' || e.code === 'auth/cancelled-popup-request') {
         showAuthError('');
       } else {
         showAuthError(authErrMsg(e.code));
