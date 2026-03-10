@@ -4484,7 +4484,7 @@ function renderCats(){
 }
 function selCat(id){sCat=id;renderCats();applyFilters();}
 
-function switchTab(t){aTab=t;document.getElementById('tab-artisti').classList.toggle('active',t==='artisti');document.getElementById('tab-esibizioni').classList.toggle('active',t==='esibizioni');applyFilters();}
+function switchTab(tab){aTab=tab;document.getElementById('tab-artisti').classList.toggle('active',tab==='artisti');document.getElementById('tab-esibizioni').classList.toggle('active',tab==='esibizioni');applyFilters();}
 function switchView(m){
   vMode=m;
   document.getElementById('view-mappa').classList.toggle('active',m==='mappa');
@@ -5669,11 +5669,17 @@ function loginWithGoogle() {
   const provider = new firebase.auth.GoogleAuthProvider();
   provider.addScope('email');
   provider.addScope('profile');
-  window._googlePopupOpen = true;
+  const isMobile = /Android|iPhone|iPad|iPod|Mobile/i.test(navigator.userAgent);
+  if (isMobile) {
+    // Su mobile i popup sono sempre bloccati → redirect diretto
+    showAuthError('⏳ Reindirizzamento a Google...');
+    auth.signInWithRedirect(provider).catch(e => showAuthError(authErrMsg(e.code)));
+    return;
+  }
+  // Desktop: prova popup
   showAuthError('⏳ Apertura Google...');
   auth.signInWithPopup(provider)
     .then(async result => {
-      window._googlePopupOpen = false;
       if (result.user) {
         await _saveGoogleUser(result.user);
         closeAuthModal();
@@ -5682,11 +5688,15 @@ function loginWithGoogle() {
       }
     })
     .catch(e => {
-      window._googlePopupOpen = false;
       if (e.code === 'auth/popup-closed-by-user' || e.code === 'auth/cancelled-popup-request') {
         showAuthError('');
+      } else if (e.code === 'auth/popup-blocked' || e.code === 'auth/operation-not-supported-in-this-environment') {
+        // Fallback redirect se popup bloccato anche su desktop
+        showAuthError('⏳ Reindirizzamento a Google...');
+        auth.signInWithRedirect(provider).catch(e2 => showAuthError(authErrMsg(e2.code)));
       } else {
         showAuthError(authErrMsg(e.code));
+        console.warn('Google login error:', e.code, e.message);
       }
     });
 }
@@ -7555,10 +7565,11 @@ function renderWorksGrid() {
 }
 
 function removeWorkPhoto(i) {
-  const allPhotos = [...worksPhotos, ...pendingWorksPhotos];
-  allPhotos.splice(i, 1);
-  worksPhotos = allPhotos.slice(0, worksPhotos.length);
-  pendingWorksPhotos = allPhotos.slice(worksPhotos.length);
+  if (i < worksPhotos.length) {
+    worksPhotos.splice(i, 1);
+  } else {
+    pendingWorksPhotos.splice(i - worksPhotos.length, 1);
+  }
   renderWorksGrid();
 }
 
