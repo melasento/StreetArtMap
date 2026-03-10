@@ -5669,13 +5669,8 @@ function loginWithGoogle() {
   const provider = new firebase.auth.GoogleAuthProvider();
   provider.addScope('email');
   provider.addScope('profile');
-  const isMobile = /Android|iPhone|iPad|iPod|Mobile/i.test(navigator.userAgent);
-  if (isMobile) {
-    showAuthError('⏳ Reindirizzamento a Google...');
-    auth.signInWithRedirect(provider).catch(e => showAuthError(authErrMsg(e.code)));
-    return;
-  }
-  // Desktop: popup — disable click-to-close while popup is in flight
+  // Usa popup per tutti (desktop e mobile).
+  // Fallback a redirect solo se il popup è bloccato o non supportato.
   window._googlePopupOpen = true;
   showAuthError('⏳ Apertura Google...');
   auth.signInWithPopup(provider)
@@ -5690,12 +5685,10 @@ function loginWithGoogle() {
     })
     .catch(e => {
       window._googlePopupOpen = false;
-      // Se il browser blocca cookie di terze parti o lo storage, usa redirect
       const useRedirect = [
+        'auth/popup-blocked',
         'auth/web-storage-unsupported',
-        'auth/operation-not-supported-in-this-environment',
-        'auth/unauthorized-domain',
-        'auth/internal-error'
+        'auth/operation-not-supported-in-this-environment'
       ].includes(e.code);
       if (useRedirect) {
         showAuthError('⏳ Reindirizzamento a Google...');
