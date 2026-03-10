@@ -5669,39 +5669,8 @@ function loginWithGoogle() {
   const provider = new firebase.auth.GoogleAuthProvider();
   provider.addScope('email');
   provider.addScope('profile');
-  const isMobile = /Android|iPhone|iPad|iPod|Mobile/i.test(navigator.userAgent);
-  if (isMobile) {
-    // Su mobile i popup sono spesso bloccati → redirect diretto
-    showAuthError('⏳ Reindirizzamento a Google...');
-    auth.signInWithRedirect(provider).catch(e => showAuthError(authErrMsg(e.code)));
-    return;
-  }
-  // Desktop: popup (più veloce e affidabile del redirect)
-  showAuthError('⏳ Apertura Google...');
-  auth.signInWithPopup(provider)
-    .then(async result => {
-      if (result.user) {
-        await _saveGoogleUser(result.user);
-        closeAuthModal();
-        showToast('👋 Benvenuto/a con Google, ' + (result.user.displayName || '').split(' ')[0] + '!');
-        setTimeout(() => loadCommunityData(), 300);
-      }
-    })
-    .catch(e => {
-      if (e.code === 'auth/popup-closed-by-user' || e.code === 'auth/cancelled-popup-request') {
-        showAuthError('');
-      } else if (e.code === 'auth/operation-not-supported-in-this-environment') {
-        // Browser doesn't support popups at all (in-app browser, some Safari modes) → use redirect
-        showAuthError('⏳ Reindirizzamento a Google...');
-        auth.signInWithRedirect(provider).catch(e2 => showAuthError(authErrMsg(e2.code)));
-      } else if (e.code === 'auth/popup-blocked') {
-        // Popup blocked by browser settings → tell user how to allow it
-        showAuthError('⚠️ Popup bloccato dal browser. Cerca l\'icona popup nella barra degli indirizzi o nelle impostazioni del sito e consenti i popup, poi riprova.');
-      } else {
-        showAuthError(authErrMsg(e.code));
-        console.warn('Google login error:', e.code, e.message);
-      }
-    });
+  showAuthError('⏳ Reindirizzamento a Google...');
+  auth.signInWithRedirect(provider).catch(e => showAuthError(authErrMsg(e.code)));
 }
 
 // Salva/aggiorna dati utente Google su Firestore
