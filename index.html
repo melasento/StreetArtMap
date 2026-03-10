@@ -5292,7 +5292,7 @@ document.getElementById('addModal').addEventListener('click',function(e){if(e.ta
 //  ╚══════════════════════════════════════════════════════════════╝
 const firebaseConfig = {
   apiKey: "AIzaSyBJ2E9e9nirLQZd8uFzwrXak2njC3vmuOc",
-  authDomain: "melasento.github.io",
+  authDomain: "streetart-italia.firebaseapp.com",
   projectId: "streetart-italia",
   storageBucket: "streetart-italia.firebasestorage.app",
   messagingSenderId: "113201968731",
@@ -5643,13 +5643,19 @@ async function registerWithEmail() {
 }
 
 function loginWithGoogle() {
-  // IMPORTANTE: nessun await prima di signInWithPopup — il browser richiede
-  // che il popup venga aperto in modo sincrono dal click dell'utente
   if (!auth) { showAuthError("❌ Firebase non pronto. Ricarica la pagina."); return; }
   const provider = new firebase.auth.GoogleAuthProvider();
   provider.addScope('email');
   provider.addScope('profile');
-  showAuthError("⏳ Apertura Google...");
+  const isMobile = /Android|iPhone|iPad|iPod|Mobile/i.test(navigator.userAgent);
+  if (isMobile) {
+    // Su mobile i popup sono sempre bloccati → redirect diretto
+    showAuthError('⏳ Reindirizzamento a Google...');
+    auth.signInWithRedirect(provider).catch(e => showAuthError(authErrMsg(e.code)));
+    return;
+  }
+  // Desktop: prova popup
+  showAuthError('⏳ Apertura Google...');
   auth.signInWithPopup(provider)
     .then(async result => {
       if (result.user) {
@@ -5662,8 +5668,10 @@ function loginWithGoogle() {
     .catch(e => {
       if (e.code === 'auth/popup-closed-by-user' || e.code === 'auth/cancelled-popup-request') {
         showAuthError('');
-      } else if (e.code === 'auth/popup-blocked') {
-        showAuthError('⚠️ Popup bloccato dal browser. Abilita i popup per questo sito e riprova.');
+      } else if (e.code === 'auth/popup-blocked' || e.code === 'auth/operation-not-supported-in-this-environment') {
+        // Fallback redirect se popup bloccato anche su desktop
+        showAuthError('⏳ Reindirizzamento a Google...');
+        auth.signInWithRedirect(provider).catch(e2 => showAuthError(authErrMsg(e2.code)));
       } else {
         showAuthError(authErrMsg(e.code));
         console.warn('Google login error:', e.code, e.message);
