@@ -31,6 +31,8 @@
 <script src="https://www.gstatic.com/firebasejs/10.12.2/firebase-app-compat.js"></script>
 <script src="https://www.gstatic.com/firebasejs/10.12.2/firebase-auth-compat.js"></script>
 <script src="https://www.gstatic.com/firebasejs/10.12.2/firebase-firestore-compat.js"></script>
+<!-- Google Identity Services (bypassa /__/auth/handler, funziona su desktop e mobile) -->
+<script src="https://accounts.google.com/gsi/client" async defer></script>
 <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
 <style>
 :root{--ink:#1A1025;--purple:#7B2FBE;--gold:#E8A000;--rust:#C94B22;--sage:#4A8C5C;--sky:#2E7BB4;--pink:#D4467A;--cream:#FAF7F2;--paper:#F2EDE6;--gray-light:#EAE5DC;--gray-mid:#BFB8AE;--gray-text:#6B6258;--r:10px;--sh:0 2px 10px rgba(26,16,37,.08);--shl:0 8px 32px rgba(26,16,37,.16)}
@@ -5642,41 +5644,52 @@ async function registerWithEmail() {
   finally { document.getElementById('authSubmitBtn').disabled = false; }
 }
 
+// ── GOOGLE CLIENT ID per GIS ──────────────────────────────────────────────
+// Sostituisci con il tuo Client ID da: Google Cloud Console → API → Credenziali
+const GOOGLE_CLIENT_ID = '113201968731-ah7ia03tbatspfoojo4japqggcas15ud.apps.googleusercontent.com';
+
 function loginWithGoogle() {
   if (!auth) { showAuthError("❌ Firebase non pronto. Ricarica la pagina."); return; }
-  const provider = new firebase.auth.GoogleAuthProvider();
-  provider.addScope('email');
-  provider.addScope('profile');
-  const isMobile = /Android|iPhone|iPad|iPod|Mobile/i.test(navigator.userAgent);
-  if (isMobile) {
-    // Su mobile i popup sono sempre bloccati → redirect diretto
-    showAuthError('⏳ Reindirizzamento a Google...');
-    auth.signInWithRedirect(provider).catch(e => showAuthError(authErrMsg(e.code)));
+  if (typeof google === 'undefined' || !google.accounts) {
+    showAuthError("❌ Google Identity Services non caricato. Riprova tra un secondo.");
     return;
   }
-  // Desktop: prova popup
   showAuthError('⏳ Apertura Google...');
-  auth.signInWithPopup(provider)
-    .then(async result => {
-      if (result.user) {
-        await _saveGoogleUser(result.user);
-        closeAuthModal();
-        showToast('👋 Benvenuto/a con Google, ' + (result.user.displayName || '').split(' ')[0] + '!');
-        setTimeout(() => loadCommunityData(), 300);
+  google.accounts.oauth2.initTokenClient({
+    client_id: GOOGLE_CLIENT_ID,
+    scope: 'email profile openid',
+    callback: async (tokenResponse) => {
+      if (tokenResponse.error) {
+        if (tokenResponse.error === 'access_denied') {
+          showAuthError('');
+        } else {
+          showAuthError('❌ Accesso Google non riuscito: ' + tokenResponse.error);
+        }
+        return;
       }
-    })
-    .catch(e => {
-      if (e.code === 'auth/popup-closed-by-user' || e.code === 'auth/cancelled-popup-request') {
-        showAuthError('');
-      } else if (e.code === 'auth/popup-blocked' || e.code === 'auth/operation-not-supported-in-this-environment') {
-        // Fallback redirect se popup bloccato anche su desktop
-        showAuthError('⏳ Reindirizzamento a Google...');
-        auth.signInWithRedirect(provider).catch(e2 => showAuthError(authErrMsg(e2.code)));
-      } else {
+      try {
+        showAuthError('⏳ Accesso in corso...');
+        const credential = firebase.auth.GoogleAuthProvider.credential(null, tokenResponse.access_token);
+        const result = await auth.signInWithCredential(credential);
+        if (result.user) {
+          await _saveGoogleUser(result.user);
+          closeAuthModal();
+          showToast('👋 Benvenuto/a con Google, ' + (result.user.displayName || '').split(' ')[0] + '!');
+          setTimeout(() => loadCommunityData(), 300);
+        }
+      } catch(e) {
         showAuthError(authErrMsg(e.code));
-        console.warn('Google login error:', e.code, e.message);
+        console.warn('Google GIS login error:', e.code, e.message);
       }
-    });
+    },
+    error_callback: (err) => {
+      if (err.type !== 'popup_closed') {
+        showAuthError('❌ Errore Google: ' + (err.type || 'sconosciuto'));
+      } else {
+        showAuthError('');
+      }
+    }
+  }).requestAccessToken({ prompt: 'select_account' });
 }
 
 // Salva/aggiorna dati utente Google su Firestore
