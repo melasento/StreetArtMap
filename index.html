@@ -5292,7 +5292,7 @@ document.getElementById('addModal').addEventListener('click',function(e){if(e.ta
 //  ╚══════════════════════════════════════════════════════════════╝
 const firebaseConfig = {
   apiKey: "AIzaSyBJ2E9e9nirLQZd8uFzwrXak2njC3vmuOc",
-  authDomain: "streetart-italia.firebaseapp.com",
+  authDomain: "melasento.github.io",
   projectId: "streetart-italia",
   storageBucket: "streetart-italia.firebasestorage.app",
   messagingSenderId: "113201968731",
@@ -5660,12 +5660,10 @@ function loginWithGoogle() {
       }
     })
     .catch(e => {
-      if (e.code === 'auth/popup-blocked' || e.code === 'auth/operation-not-supported-in-this-environment') {
-        // Popup bloccato dal browser (es. mobile, browser restrittivi) → fallback redirect
-        showAuthError('⏳ Reindirizzamento a Google...');
-        auth.signInWithRedirect(provider).catch(e2 => showAuthError(authErrMsg(e2.code)));
-      } else if (e.code === 'auth/popup-closed-by-user' || e.code === 'auth/cancelled-popup-request') {
+      if (e.code === 'auth/popup-closed-by-user' || e.code === 'auth/cancelled-popup-request') {
         showAuthError('');
+      } else if (e.code === 'auth/popup-blocked') {
+        showAuthError('⚠️ Popup bloccato dal browser. Abilita i popup per questo sito e riprova.');
       } else {
         showAuthError(authErrMsg(e.code));
         console.warn('Google login error:', e.code, e.message);
