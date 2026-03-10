@@ -5690,7 +5690,17 @@ function loginWithGoogle() {
     })
     .catch(e => {
       window._googlePopupOpen = false;
-      if (e.code === 'auth/popup-closed-by-user' || e.code === 'auth/cancelled-popup-request') {
+      // Se il browser blocca cookie di terze parti o lo storage, usa redirect
+      const useRedirect = [
+        'auth/web-storage-unsupported',
+        'auth/operation-not-supported-in-this-environment',
+        'auth/unauthorized-domain',
+        'auth/internal-error'
+      ].includes(e.code);
+      if (useRedirect) {
+        showAuthError('⏳ Reindirizzamento a Google...');
+        auth.signInWithRedirect(provider).catch(e2 => showAuthError(authErrMsg(e2.code)));
+      } else if (e.code === 'auth/popup-closed-by-user' || e.code === 'auth/cancelled-popup-request') {
         showAuthError('');
       } else {
         showAuthError(authErrMsg(e.code));
@@ -5708,7 +5718,7 @@ async function _saveGoogleUser(user) {
       email: user.email || '',
       photoURL: user.photoURL || '',
       joinedAt: firebase.firestore.FieldValue.serverTimestamp(),
-      role: 'user'
+      role: 'fan'
     }, { merge: true });
   } catch(e) {}
 }
