@@ -5616,42 +5616,59 @@ async function registerWithEmail() {
 }
 
 async function loginWithGoogle() {
-  showAuthError("⏳ Reindirizzamento a Google...");
+  showAuthError("⏳ Connessione con Google...");
   const ready = await ensureFirebase();
   if (!ready) { showAuthError("❌ Errore di connessione. Controlla la rete e riprova."); return; }
+  const provider = new firebase.auth.GoogleAuthProvider();
+  provider.addScope('email');
+  provider.addScope('profile');
   try {
-    const provider = new firebase.auth.GoogleAuthProvider();
-    provider.addScope('email');
-    provider.addScope('profile');
-    await auth.signInWithRedirect(provider);
-    // La pagina si ricarica automaticamente — il risultato viene gestito in handleGoogleRedirect()
-  } catch(e) {
-    showAuthError(authErrMsg(e.code));
-  }
-}
-
-// Gestisce il risultato del redirect Google al caricamento della pagina
-async function handleGoogleRedirect() {
-  const ready = await ensureFirebase();
-  if (!ready) return;
-  try {
-    const result = await auth.getRedirectResult();
-    if (result && result.user) {
-      await db.collection('users').doc(result.user.uid).set({
-        displayName: result.user.displayName,
-        displayNameLower: (result.user.displayName || '').toLowerCase(),
-        email: result.user.email,
-        photoURL: result.user.photoURL,
-        joinedAt: firebase.firestore.FieldValue.serverTimestamp(),
-        role: 'user'
-      }, { merge: true });
-      showToast('👋 Bentornato/a con Google!');
+    // Prova prima con popup (funziona su browser desktop standard)
+    const result = await auth.signInWithPopup(provider);
+    if (result.user) {
+      await _saveGoogleUser(result.user);
+      closeAuthModal();
+      showToast('👋 Benvenuto/a con Google, ' + (result.user.displayName || '').split(' ')[0] + '!');
       setTimeout(() => loadCommunityData(), 300);
     }
   } catch(e) {
-    if (e.code && e.code !== 'auth/no-auth-event') {
-      console.warn('Google redirect error:', e.code);
+    if (e.code === 'auth/operation-not-supported-in-this-environment' ||
+        e.code === 'auth/popup-blocked') {
+      // Fallback: redirect (per mobile o browser con popup bloccati)
+      try { await auth.signInWithRedirect(provider); } catch(e2) { showAuthError(authErrMsg(e2.code)); }
+    } else if (e.code !== 'auth/popup-closed-by-user' && e.code !== 'auth/cancelled-popup-request') {
+      showAuthError(authErrMsg(e.code));
     }
+  }
+}
+
+// Salva/aggiorna dati utente Google su Firestore
+async function _saveGoogleUser(user) {
+  if (!db || !user) return;
+  try {
+    await db.collection('users').doc(user.uid).set({
+      displayName: user.displayName || '',
+      displayNameLower: (user.displayName || '').toLowerCase(),
+      email: user.email || '',
+      photoURL: user.photoURL || '',
+      joinedAt: firebase.firestore.FieldValue.serverTimestamp(),
+      role: 'user'
+    }, { merge: true });
+  } catch(e) {}
+}
+
+// Gestisce eventuale redirect Google al caricamento pagina (fallback mobile)
+async function handleGoogleRedirect() {
+  if (!auth) return;
+  try {
+    const result = await auth.getRedirectResult();
+    if (result && result.user) {
+      await _saveGoogleUser(result.user);
+      showToast('👋 Benvenuto/a con Google, ' + (result.user.displayName || '').split(' ')[0] + '!');
+      setTimeout(() => loadCommunityData(), 300);
+    }
+  } catch(e) {
+    if (e.code && e.code !== 'auth/no-auth-event') console.warn('Google redirect:', e.code);
   }
 }
 
