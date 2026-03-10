@@ -5669,8 +5669,16 @@ function loginWithGoogle() {
   const provider = new firebase.auth.GoogleAuthProvider();
   provider.addScope('email');
   provider.addScope('profile');
-  // Usa popup per tutti (desktop e mobile).
-  // Fallback a redirect solo se il popup è bloccato o non supportato.
+  // Se l'app è installata come PWA (standalone), i popup sono bloccati dal SO.
+  // In quel caso usa signInWithRedirect. In tutti gli altri casi usa popup.
+  const isPWA = window.navigator.standalone === true
+    || window.matchMedia('(display-mode: standalone)').matches;
+  if (isPWA) {
+    showAuthError('⏳ Reindirizzamento a Google...');
+    auth.signInWithRedirect(provider).catch(e => showAuthError(authErrMsg(e.code)));
+    return;
+  }
+  // Browser normale: popup
   window._googlePopupOpen = true;
   showAuthError('⏳ Apertura Google...');
   auth.signInWithPopup(provider)
