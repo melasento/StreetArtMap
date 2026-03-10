@@ -4860,7 +4860,7 @@ function renderList(){
         <div class="card-avatar" style="background:${cm.bg||cm.color+'22'};font-size:18px">${cm.icon}</div>
         <div class="card-info">
           <div class="card-name">${s.title||'Elemento urbano'}${distHtml}<span style="background:${cm.bg||cm.color+'22'};color:${cm.color};border-radius:8px;padding:2px 7px;font-size:10px;margin-left:5px;font-weight:700">${cm.label}</span></div>
-          <div class="card-pseudo" style="font-size:11px;color:#aaa">segnalato da ${s._submittedByName||'utente'}</div>
+          <div class="card-pseudo" style="font-size:11px;color:#aaa">segnalato da ${(s._submittedByName||'utente').split(' ')[0]}</div>
           <div class="card-zone">📍 ${s.zone||s.city||''}</div>
           ${s._dist?`<div class="dist-text">🧭 ${formatDist(s._dist)} ${t('fromYou')}</div>`:''}
           <div class="card-rating" style="color:#10B981;font-size:11px">✅ Verificato</div>
@@ -6846,7 +6846,7 @@ function showCommunityDetail(a) {
         ${!a._verified?'<div class="badge-unverified">⏳ Non verificato dalla community</div>':'<div class="badge-verified">✅ Verificato</div>'}
       </div>
       <div class="detail-location">📍 ${a.zone||a.city||'Posizione da GPS'}</div>
-      <div style="font-size:11.5px;color:#aaa;margin-top:5px">Aggiunto da <b>${a._submittedByName||'utente'}</b></div>
+      <div style="font-size:11.5px;color:#aaa;margin-top:5px">Aggiunto da <b>${(a._submittedByName||'utente').split(' ')[0]}</b></div>
     </div>
     ${a.photoData?`<img src="${a.photoData}" style="width:100%;border-radius:14px;margin-bottom:16px;max-height:280px;object-fit:cover">`:''}
     ${(a.bio||a.description)?`<div class="divider"></div><div class="section-title">${a._sighting?'Descrizione':'Bio'}</div><div class="bio-text">${a.bio||a.description}</div>`:''}
@@ -6947,11 +6947,11 @@ async function openSightingDetail(sightingId) {
         <div style="font-weight:800;font-size:18px;margin-top:6px">${s.title || 'Elemento urbano'}</div>
         <div style="display:inline-flex;align-items:center;gap:5px;background:${cm.bg||cm.color+'22'};color:${cm.color};border-radius:20px;padding:4px 12px;font-size:11px;font-weight:700;margin-top:6px">${cm.icon} ${cm.label}</div>
         <div style="font-size:12px;color:#aaa;margin-top:6px">${s.city ? '📍 ' + s.city : ''}${dateStr ? ' · ' + dateStr : ''}</div>
-        <div style="font-size:11.5px;color:#bbb;margin-top:2px">Segnalato da <b>${s.submittedByName||'utente'}</b></div>
+        <div style="font-size:11.5px;color:#bbb;margin-top:2px">Segnalato da <b>${(s.submittedByName||'utente').split(' ')[0]}</b></div>
       </div>
 
       <!-- Foto -->
-      ${s.photoData ? `<img src="${s.photoData}" style="width:100%;border-radius:14px;margin-bottom:16px;max-height:260px;object-fit:cover">` : ''}
+      ${s.photoData ? `<img src="${s.photoData}" style="width:100%;border-radius:14px;margin-bottom:16px;max-height:420px;object-fit:contain;background:#f5f0ea">` : ''}
 
       <!-- Descrizione -->
       ${s.description ? `
