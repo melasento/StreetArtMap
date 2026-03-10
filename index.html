@@ -5670,7 +5670,12 @@ function loginWithGoogle() {
   provider.addScope('email');
   provider.addScope('profile');
   showAuthError('⏳ Reindirizzamento a Google...');
-  auth.signInWithRedirect(provider).catch(e => showAuthError(authErrMsg(e.code)));
+  // Use SESSION persistence (sessionStorage) instead of LOCAL (IndexedDB)
+  // — fixes auth/operation-not-supported-in-this-environment on Chrome with
+  //   third-party cookie / tracker blocking enabled (common on GitHub Pages)
+  auth.setPersistence(firebase.auth.Auth.Persistence.SESSION)
+    .then(() => auth.signInWithRedirect(provider))
+    .catch(e => showAuthError(authErrMsg(e.code)));
 }
 
 // Salva/aggiorna dati utente Google su Firestore
