@@ -755,9 +755,14 @@ body{font-family:'DM Sans',sans-serif;background:var(--paper);color:var(--ink);h
         </button>
         <div id="deleteAccountConfirm" style="display:none;background:#FEF2F2;border:1.5px solid #FECACA;border-radius:10px;padding:14px">
           <div style="font-size:13.5px;font-weight:700;color:#DC2626;margin-bottom:6px">⚠️ Sei sicuro/a?</div>
-          <div style="font-size:12.5px;color:#666;line-height:1.5;margin-bottom:12px">Questa azione è irreversibile. Tutti i tuoi dati, segnalazioni e commenti verranno eliminati definitivamente.</div>
-          <div style="font-size:12px;color:#888;margin-bottom:8px">Inserisci la tua password per confermare:</div>
-          <input id="deletePasswordInput" type="password" placeholder="Password" style="width:100%;box-sizing:border-box;padding:9px 12px;border:1.5px solid #FECACA;border-radius:8px;font-family:'DM Sans',sans-serif;font-size:13px;margin-bottom:10px;outline:none">
+          <div style="font-size:12.5px;color:#666;line-height:1.5;margin-bottom:12px">Il tuo account verrà eliminato definitivamente. I contenuti che hai pubblicato (segnalazioni, commenti) resteranno visibili con il tuo nome.</div>
+          <div id="deletePasswordSection">
+            <div style="font-size:12px;color:#888;margin-bottom:8px">Inserisci la tua password per confermare:</div>
+            <input id="deletePasswordInput" type="password" placeholder="Password" style="width:100%;box-sizing:border-box;padding:9px 12px;border:1.5px solid #FECACA;border-radius:8px;font-family:'DM Sans',sans-serif;font-size:13px;margin-bottom:10px;outline:none">
+          </div>
+          <div id="deleteGoogleSection" style="display:none">
+            <div style="font-size:12px;color:#888;margin-bottom:10px">Verrà richiesta una conferma tramite il tuo account Google.</div>
+          </div>
           <div style="display:flex;gap:8px">
             <button onclick="document.getElementById('deleteAccountConfirm').style.display='none'" style="flex:1;padding:9px;background:#fff;border:1.5px solid var(--gray-light);border-radius:8px;font-family:'DM Sans',sans-serif;font-size:13px;font-weight:600;cursor:pointer">Annulla</button>
             <button onclick="doDeleteAccount()" style="flex:1;padding:9px;background:#DC2626;color:#fff;border:none;border-radius:8px;font-family:'DM Sans',sans-serif;font-size:13px;font-weight:700;cursor:pointer">Elimina</button>
@@ -5642,31 +5647,30 @@ async function registerWithEmail() {
   finally { document.getElementById('authSubmitBtn').disabled = false; }
 }
 
-function loginWithGoogle() {
-  if (!auth) { showAuthError("❌ Firebase non pronto. Ricarica la pagina."); return; }
+async function loginWithGoogle() {
+  const ready = await ensureFirebase();
+  if (!ready || !auth) { showAuthError("❌ Firebase non pronto. Controlla la connessione e ricarica."); return; }
   const provider = new firebase.auth.GoogleAuthProvider();
   provider.addScope('email');
   provider.addScope('profile');
   provider.setCustomParameters({ prompt: 'select_account' });
   showAuthError('⏳ Apertura login Google...');
-  auth.signInWithPopup(provider)
-    .then(async result => {
-      if (result && result.user) {
-        await _saveGoogleUser(result.user);
-        closeAuthModal();
-        showToast('👋 Benvenuto/a con Google, ' + (result.user.displayName || '').split(' ')[0] + '!');
-        setTimeout(() => loadCommunityData(), 300);
-      }
-    })
-    .catch(e => {
-      if (e.code === 'auth/popup-blocked') {
-        // Fallback a redirect se il popup viene bloccato
-        showAuthError('⏳ Popup bloccato, reindirizzamento...');
-        auth.signInWithRedirect(provider).catch(err => showAuthError(authErrMsg(err.code)));
-      } else {
-        showAuthError(authErrMsg(e.code));
-      }
-    });
+  try {
+    const result = await auth.signInWithPopup(provider);
+    if (result && result.user) {
+      await _saveGoogleUser(result.user);
+      closeAuthModal();
+      showToast('👋 Benvenuto/a con Google, ' + (result.user.displayName || '').split(' ')[0] + '!');
+      setTimeout(() => loadCommunityData(), 300);
+    }
+  } catch(e) {
+    if (e.code === 'auth/popup-blocked' || e.code === 'auth/popup-closed-by-user') {
+      showAuthError('⏳ Popup bloccato, reindirizzamento...');
+      auth.signInWithRedirect(provider).catch(err => showAuthError(authErrMsg(err.code)));
+    } else {
+      showAuthError(authErrMsg(e.code));
+    }
+  }
 }
 
 // Salva/aggiorna dati utente Google su Firestore
@@ -5711,18 +5715,54 @@ async function logout() {
 
 function showAuthError(msg) { document.getElementById('authError').textContent = msg; }
 function authErrMsg(code) {
-  return ({
-    'auth/user-not-found':'Utente non trovato.',
-    'auth/wrong-password':'Password errata.',
-    'auth/invalid-credential':'Email o password errati.',
-    'auth/email-already-in-use':'Email già in uso.',
-    'auth/invalid-email':'Email non valida.',
-    'auth/weak-password':'Password troppo debole.',
-    'auth/too-many-requests':'Troppi tentativi. Riprova tra poco.',
-    'auth/popup-closed-by-user':'Login annullato.',
-    'auth/cancelled-popup-request':'Login annullato.',
-  })[code] || 'Errore (' + code + ')';
+  const msgs = {
+    'auth/user-not-found':           'Utente non trovato.',
+    'auth/wrong-password':           'Password errata.',
+    'auth/invalid-credential':       'Email o password errati.',
+    'auth/email-already-in-use':     'Email già in uso.',
+    'auth/invalid-email':            'Email non valida.',
+    'auth/weak-password':            'Password troppo debole (min. 6 caratteri).',
+    'auth/too-many-requests':        'Troppi tentativi. Riprova tra poco.',
+    'auth/popup-closed-by-user':     'Finestra Google chiusa. Riprova.',
+    'auth/cancelled-popup-request':  'Login annullato.',
+    'auth/network-request-failed':   '❌ Errore di rete. Controlla la connessione.',
+    'auth/unauthorized-domain':      '❌ Dominio non autorizzato. Vai su Firebase Console → Authentication → Settings → Authorized domains e aggiungi il dominio di questa pagina.',
+    'auth/operation-not-allowed':    '❌ Google Sign-In non abilitato. Vai su Firebase Console → Authentication → Sign-in method → abilita Google.',
+    'auth/internal-error':           '❌ Errore interno Firebase. Controlla che il dominio sia autorizzato.',
+    'auth/configuration-not-found':  '❌ Configurazione Firebase non trovata. Controlla apiKey e authDomain.',
+  };
+  return msgs[code] || ('❌ Errore: ' + (code || 'sconosciuto') + '. Apri la console (F12) per dettagli.');
 }
+
+// ── DIAGNOSTICA FIREBASE ──
+// Chiamata automaticamente all'avvio, mostra errori visibili nell'auth modal
+async function runFirebaseDiagnostics() {
+  const issues = [];
+  if (typeof firebase === 'undefined') {
+    issues.push('Firebase SDK non caricato (problema di rete o blocco script)');
+  } else if (!FB_READY) {
+    issues.push('firebaseConfig non compilato nel codice');
+  } else {
+    if (!auth) issues.push('Firebase Auth non inizializzato (controlla la console per errori)');
+    if (!db)   issues.push('Firestore non inizializzato');
+  }
+  // Testa connettività
+  try {
+    await fetch('https://firestore.googleapis.com/v1/projects/' + firebaseConfig.projectId + '/databases/(default)/documents', {method:'HEAD', mode:'no-cors'});
+  } catch(e) {
+    issues.push('Impossibile raggiungere i server Firebase (problema di rete)');
+  }
+  if (issues.length > 0) {
+    console.warn('🔥 Firebase diagnostics:', issues);
+    // Mostra un avviso discreto se l'auth modal è aperto
+    const errEl = document.getElementById('authError');
+    if (errEl && !errEl.textContent) {
+      errEl.style.color = '#C94B22';
+      errEl.textContent = '⚠️ ' + issues[0];
+    }
+  }
+}
+setTimeout(runFirebaseDiagnostics, 3000);
 
 // ── NOTIFICHE DI ZONA ──
 const NOTIF_LS_KEY = 'streetart_notif_settings';
@@ -6381,52 +6421,65 @@ async function deleteReview(idx) {
 // ── ELIMINA ACCOUNT ──
 function confirmDeleteAccount() {
   const el = document.getElementById('deleteAccountConfirm');
-  el.style.display = el.style.display === 'none' ? 'block' : 'none';
-  document.getElementById('deletePasswordInput').value = '';
-  document.getElementById('deleteAccountError').style.display = 'none';
+  const isOpen = el.style.display !== 'none';
+  el.style.display = isOpen ? 'none' : 'block';
+  if (!isOpen) {
+    document.getElementById('deleteAccountError').style.display = 'none';
+    // Mostra sezione password o Google a seconda del provider
+    const isGoogle = currentUser && currentUser.providerData &&
+      currentUser.providerData.some(p => p.providerId === 'google.com');
+    document.getElementById('deletePasswordSection').style.display = isGoogle ? 'none' : 'block';
+    document.getElementById('deleteGoogleSection').style.display  = isGoogle ? 'block' : 'none';
+    const pwdInput = document.getElementById('deletePasswordInput');
+    if (pwdInput) pwdInput.value = '';
+  }
 }
 
 async function doDeleteAccount() {
   if (!auth || !currentUser || !db) return;
-  const pwd = document.getElementById('deletePasswordInput').value;
   const errEl = document.getElementById('deleteAccountError');
   errEl.style.display = 'none';
 
-  if (!pwd) { errEl.textContent = 'Inserisci la tua password.'; errEl.style.display='block'; return; }
+  const isGoogle = currentUser.providerData &&
+    currentUser.providerData.some(p => p.providerId === 'google.com');
+  const uid = currentUser.uid;
 
   try {
-    // Re-autenticazione richiesta da Firebase prima di eliminare
-    const credential = firebase.auth.EmailAuthProvider.credential(currentUser.email, pwd);
-    await currentUser.reauthenticateWithCredential(credential);
+    // Re-autenticazione (obbligatoria da Firebase prima di delete)
+    if (isGoogle) {
+      const provider = new firebase.auth.GoogleAuthProvider();
+      await currentUser.reauthenticateWithPopup(provider);
+    } else {
+      const pwd = document.getElementById('deletePasswordInput').value;
+      if (!pwd) {
+        errEl.textContent = 'Inserisci la tua password.';
+        errEl.style.display = 'block';
+        return;
+      }
+      const credential = firebase.auth.EmailAuthProvider.credential(currentUser.email, pwd);
+      await currentUser.reauthenticateWithCredential(credential);
+    }
 
-    const uid = currentUser.uid;
+    // Elimina solo il profilo utente e artista — i contenuti restano
+    await Promise.all([
+      db.collection('users').doc(uid).delete().catch(() => {}),
+      db.collection('artistProfiles').doc(uid).delete().catch(() => {})
+    ]);
 
-    // Elimina dati Firestore
-    const dels = [];
-    dels.push(db.collection('users').doc(uid).delete().catch(()=>{}));
-    dels.push(db.collection('artistProfiles').doc(uid).delete().catch(()=>{}));
-    // Elimina reviews dell'utente
-    const revSnap = await db.collection('reviews').where('authorUid','==',uid).get();
-    revSnap.forEach(d => dels.push(d.ref.delete().catch(()=>{})));
-    // Elimina submissions e sightings
-    const subSnap = await db.collection('submissions').where('submittedBy','==',uid).get();
-    subSnap.forEach(d => dels.push(d.ref.delete().catch(()=>{})));
-    const sigSnap = await db.collection('sightings').where('submittedBy','==',uid).get();
-    sigSnap.forEach(d => dels.push(d.ref.delete().catch(()=>{})));
-    await Promise.all(dels);
-
-    // Elimina account Firebase Auth
+    // Elimina l'account Firebase Auth
     await currentUser.delete();
 
-    closeProfileModal();
+    // Reload pulito della pagina
     showToast('Account eliminato. Arrivederci! 👋');
-    communityArtists = []; communitySightings = [];
-    renderMarkers();
+    setTimeout(() => { window.location.reload(); }, 1200);
+
   } catch(e) {
-    if (e.code === 'auth/wrong-password') {
+    if (e.code === 'auth/wrong-password' || e.code === 'auth/invalid-credential') {
       errEl.textContent = 'Password errata.';
     } else if (e.code === 'auth/requires-recent-login') {
-      errEl.textContent = 'Sessione scaduta. Esci e rientra prima di eliminare l\'account.';
+      errEl.textContent = 'Sessione scaduta. Esci e rientra prima di eliminare.';
+    } else if (e.code === 'auth/popup-closed-by-user') {
+      errEl.textContent = 'Operazione annullata.';
     } else {
       errEl.textContent = 'Errore: ' + (e.message || e.code);
     }
