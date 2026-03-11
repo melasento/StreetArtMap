@@ -5647,9 +5647,26 @@ function loginWithGoogle() {
   const provider = new firebase.auth.GoogleAuthProvider();
   provider.addScope('email');
   provider.addScope('profile');
-  // signInWithRedirect is more reliable than popup on GitHub Pages and PWAs
-  showAuthError('⏳ Reindirizzamento a Google...');
-  auth.signInWithRedirect(provider).catch(e => showAuthError(authErrMsg(e.code)));
+  provider.setCustomParameters({ prompt: 'select_account' });
+  showAuthError('⏳ Apertura login Google...');
+  auth.signInWithPopup(provider)
+    .then(async result => {
+      if (result && result.user) {
+        await _saveGoogleUser(result.user);
+        closeAuthModal();
+        showToast('👋 Benvenuto/a con Google, ' + (result.user.displayName || '').split(' ')[0] + '!');
+        setTimeout(() => loadCommunityData(), 300);
+      }
+    })
+    .catch(e => {
+      if (e.code === 'auth/popup-blocked') {
+        // Fallback a redirect se il popup viene bloccato
+        showAuthError('⏳ Popup bloccato, reindirizzamento...');
+        auth.signInWithRedirect(provider).catch(err => showAuthError(authErrMsg(err.code)));
+      } else {
+        showAuthError(authErrMsg(e.code));
+      }
+    });
 }
 
 // Salva/aggiorna dati utente Google su Firestore
