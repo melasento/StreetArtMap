@@ -6200,9 +6200,10 @@ async function doForgotPassword() {
   }
 }
 
-// Chiudi forgot modal cliccando fuori
-document.getElementById('forgotModal').addEventListener('click', function(e) {
-  if (e.target === this) closeForgotModal();
+// Chiudi forgot modal cliccando fuori (eseguito dopo che il DOM è pronto)
+document.addEventListener('DOMContentLoaded', function() {
+  const fm = document.getElementById('forgotModal');
+  if (fm) fm.addEventListener('click', function(e) { if (e.target === this) closeForgotModal(); });
 });
 
 // ── DIAGNOSTICA FIREBASE ──
