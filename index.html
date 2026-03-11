@@ -528,7 +528,13 @@ body{font-family:'DM Sans',sans-serif;background:var(--paper);color:var(--ink);h
       <div class="or-divider"><span>oppure</span></div>
       <div id="authLoginFields">
         <div class="form-field"><label class="form-label">Email o username</label><input class="form-input" id="loginEmail" type="text" placeholder="email o username" onkeydown="if(event.key==='Enter')doAuth()" autocomplete="username"></div>
-        <div class="form-field"><label class="form-label">Password</label><input class="form-input" id="loginPassword" type="password" placeholder="••••••••" onkeydown="if(event.key==='Enter')doAuth()"></div>
+        <div class="form-field">
+          <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:5px">
+            <label class="form-label" style="margin-bottom:0">Password</label>
+            <button type="button" onclick="openForgotPassword()" style="background:none;border:none;font-size:12px;color:var(--purple);font-family:'DM Sans',sans-serif;font-weight:600;cursor:pointer;padding:0;text-decoration:underline">Password dimenticata?</button>
+          </div>
+          <input class="form-input" id="loginPassword" type="password" placeholder="••••••••" onkeydown="if(event.key==='Enter')doAuth()">
+        </div>
       </div>
       <div id="authRegisterFields" style="display:none">
 
@@ -757,7 +763,10 @@ body{font-family:'DM Sans',sans-serif;background:var(--paper);color:var(--ink);h
           <div style="font-size:13.5px;font-weight:700;color:#DC2626;margin-bottom:6px">⚠️ Sei sicuro/a?</div>
           <div style="font-size:12.5px;color:#666;line-height:1.5;margin-bottom:12px">Il tuo account verrà eliminato definitivamente. I contenuti che hai pubblicato (segnalazioni, commenti) resteranno visibili con il tuo nome.</div>
           <div id="deletePasswordSection">
-            <div style="font-size:12px;color:#888;margin-bottom:8px">Inserisci la tua password per confermare:</div>
+            <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:8px">
+              <div style="font-size:12px;color:#888">Inserisci la tua password per confermare:</div>
+              <button type="button" onclick="openForgotPasswordFromDelete()" style="background:none;border:none;font-size:11px;color:#DC2626;font-family:'DM Sans',sans-serif;font-weight:600;cursor:pointer;padding:0;text-decoration:underline">Non la ricordi?</button>
+            </div>
             <input id="deletePasswordInput" type="password" placeholder="Password" style="width:100%;box-sizing:border-box;padding:9px 12px;border:1.5px solid #FECACA;border-radius:8px;font-family:'DM Sans',sans-serif;font-size:13px;margin-bottom:10px;outline:none">
           </div>
           <div id="deleteGoogleSection" style="display:none">
@@ -5734,6 +5743,82 @@ function authErrMsg(code) {
   return msgs[code] || ('❌ Errore: ' + (code || 'sconosciuto') + '. Apri la console (F12) per dettagli.');
 }
 
+
+// ── RECUPERO PASSWORD ──
+function openForgotPassword() {
+  // Pre-compila con l'email già inserita nel campo login, se presente
+  const loginEmail = document.getElementById('loginEmail');
+  const emailVal = loginEmail ? loginEmail.value.trim() : '';
+  // Mostra solo se è un'email valida (non username)
+  const isEmail = /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(emailVal);
+  document.getElementById('forgotEmail').value = isEmail ? emailVal : '';
+  document.getElementById('forgotMsg').textContent = '';
+  document.getElementById('forgotSubmitBtn').disabled = false;
+  // Chiudi auth modal e apri forgot modal
+  closeAuthModal();
+  document.getElementById('forgotModal').classList.add('show');
+}
+
+function openForgotPasswordFromDelete() {
+  // Apri il modal di recupero password pre-compilato con l'email dell'utente
+  const email = currentUser ? currentUser.email : '';
+  document.getElementById('forgotEmail').value = email || '';
+  document.getElementById('forgotMsg').textContent = '';
+  document.getElementById('forgotSubmitBtn').disabled = false;
+  document.getElementById('forgotModal').classList.add('show');
+}
+
+function closeForgotModal() {
+  document.getElementById('forgotModal').classList.remove('show');
+  document.getElementById('forgotMsg').textContent = '';
+}
+
+async function doForgotPassword() {
+  if (!auth) { 
+    document.getElementById('forgotMsg').style.color = '#DC2626';
+    document.getElementById('forgotMsg').textContent = '❌ Firebase non pronto. Ricarica la pagina.';
+    return;
+  }
+  const email = document.getElementById('forgotEmail').value.trim();
+  const msgEl = document.getElementById('forgotMsg');
+  const btn   = document.getElementById('forgotSubmitBtn');
+  msgEl.textContent = '';
+
+  if (!email || !/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email)) {
+    msgEl.style.color = '#DC2626';
+    msgEl.textContent = '❌ Inserisci un indirizzo email valido.';
+    return;
+  }
+
+  btn.disabled = true;
+  msgEl.style.color = '#888';
+  msgEl.textContent = '⏳ Invio in corso...';
+
+  try {
+    await auth.sendPasswordResetEmail(email);
+    msgEl.style.color = '#2E7D4F';
+    msgEl.textContent = '✅ Email inviata! Controlla la tua casella (anche spam). Il link scade in 1 ora.';
+    btn.textContent = 'EMAIL INVIATA ✓';
+  } catch(e) {
+    btn.disabled = false;
+    if (e.code === 'auth/user-not-found' || e.code === 'auth/invalid-email') {
+      msgEl.style.color = '#DC2626';
+      msgEl.textContent = '❌ Nessun account trovato con questa email.';
+    } else if (e.code === 'auth/too-many-requests') {
+      msgEl.style.color = '#DC2626';
+      msgEl.textContent = '❌ Troppi tentativi. Aspetta qualche minuto e riprova.';
+    } else {
+      msgEl.style.color = '#DC2626';
+      msgEl.textContent = '❌ Errore: ' + (e.message || e.code);
+    }
+  }
+}
+
+// Chiudi forgot modal cliccando fuori
+document.getElementById('forgotModal').addEventListener('click', function(e) {
+  if (e.target === this) closeForgotModal();
+});
+
 // ── DIAGNOSTICA FIREBASE ──
 // Chiamata automaticamente all'avvio, mostra errori visibili nell'auth modal
 async function runFirebaseDiagnostics() {
@@ -8199,6 +8284,32 @@ async function compressImageFromDataURL(dataURL, maxPx, quality){
   <button onclick="closePhotoLightbox()" style="position:absolute;top:16px;right:16px;background:rgba(255,255,255,.15);border:none;color:#fff;font-size:24px;width:42px;height:42px;border-radius:50%;cursor:pointer">✕</button>
 </div>
 
+
+
+<!-- ── FORGOT PASSWORD MODAL ── -->
+<div class="modal-overlay" id="forgotModal">
+  <div class="modal" style="max-width:400px">
+    <div class="modal-header">
+      <button class="modal-close" onclick="closeForgotModal()">✕</button>
+      <div class="modal-title">Recupera Password</div>
+      <div style="width:30px"></div>
+    </div>
+    <div class="modal-body">
+      <div style="font-size:13.5px;color:var(--gray-text);line-height:1.6;margin-bottom:16px">
+        Inserisci l'indirizzo email con cui ti sei registrato/a. Ti manderemo un link per reimpostare la password.
+      </div>
+      <div class="form-field">
+        <label class="form-label">Email</label>
+        <input class="form-input" id="forgotEmail" type="email" placeholder="la-tua@email.com" onkeydown="if(event.key==='Enter')doForgotPassword()">
+      </div>
+      <div id="forgotMsg" style="font-size:13px;margin-bottom:10px;min-height:18px;line-height:1.4"></div>
+      <button class="submit-btn" id="forgotSubmitBtn" onclick="doForgotPassword()">INVIA EMAIL DI RECUPERO</button>
+      <div style="text-align:center;margin-top:14px">
+        <button onclick="closeForgotModal()" style="background:none;border:none;font-size:13px;color:var(--gray-text);font-family:'DM Sans',sans-serif;cursor:pointer;text-decoration:underline">Torna al login</button>
+      </div>
+    </div>
+  </div>
+</div>
 
 </body>
 </html>
