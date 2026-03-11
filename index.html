@@ -237,7 +237,6 @@ body{font-family:'DM Sans',sans-serif;background:var(--paper);color:var(--ink);h
 }
 
 /* ── Sighting Detail Modal ── */
-#sightingDetailModal { z-index: 3000; }
 #sightingDetailModal .modal { border-radius:20px 20px 0 0; }
 .seg-action-btn {
   display:inline-flex;align-items:center;gap:6px;
@@ -4484,7 +4483,7 @@ function renderCats(){
 }
 function selCat(id){sCat=id;renderCats();applyFilters();}
 
-function switchTab(tab){aTab=tab;document.getElementById('tab-artisti').classList.toggle('active',tab==='artisti');document.getElementById('tab-esibizioni').classList.toggle('active',tab==='esibizioni');applyFilters();}
+function switchTab(t){aTab=t;document.getElementById('tab-artisti').classList.toggle('active',t==='artisti');document.getElementById('tab-esibizioni').classList.toggle('active',t==='esibizioni');applyFilters();}
 function switchView(m){
   vMode=m;
   document.getElementById('view-mappa').classList.toggle('active',m==='mappa');
@@ -4819,9 +4818,7 @@ function closePopup(){document.getElementById('artistPopup').classList.remove('s
 // Lookup helper per sightings: evita arrow function in HTML onclick
 function openSightingById(id) {
   const s = communitySightings.find(x => x.id === id);
-  if (!s) return;
-  if (s._firestoreId) openSightingDetail(s._firestoreId);
-  else showCommunityDetail(s);
+  if (s) showCommunityDetail(s);
 }
 
 function renderList(){
@@ -4866,7 +4863,7 @@ function renderList(){
           <div class="card-pseudo" style="font-size:11px;color:#aaa">segnalato da ${(s._submittedByName||'utente').split(' ')[0]}</div>
           <div class="card-zone">📍 ${s.zone||s.city||''}</div>
           ${s._dist?`<div class="dist-text">🧭 ${formatDist(s._dist)} ${t('fromYou')}</div>`:''}
-          <div class="card-rating" style="font-size:11px;color:${s._verified?'#10B981':'#F59E0B'}">${s._verified?'✅ Verificato':'⏳ Non verificato'}</div>
+          <div class="card-rating" style="color:#10B981;font-size:11px">✅ Verificato</div>
         </div>
         <div class="card-dot" style="background:${cm.color}"></div>
         <span class="card-chevron">›</span>
@@ -4994,7 +4991,7 @@ function openArtistModalBase(id){
 }
 function rCard(r){return`<div class="review-card">
   <div class="review-header">
-    <div class="review-avatar">${(r.author||'?')[0]}</div>
+    <div class="review-avatar">${r.author[0]}</div>
     <div style="flex:1"><div class="review-author">${r.author}</div><div class="review-date">${r.date}</div></div>
     <div class="review-stars">${[1,2,3,4,5].map(s=>`<span style="color:${s<=r.rating?'#E8A000':'#EAE5DC'}">★</span>`).join('')}</div>
   </div>
@@ -5011,25 +5008,6 @@ function submitRev(aid){
   const rev={author:authorName,rating:savedRating,text:txt,date:'adesso',photo:photo||undefined};
   REVS[aid]=[rev,...REVS[aid]];
   document.getElementById('rvList').innerHTML=REVS[aid].map(rCard).join('');
-  // Update artist rating & review count in local data
-  const artistToUpdate=ARTISTS.find(x=>x.id===aid);
-  if(artistToUpdate){
-    const allRatings=REVS[aid].map(r=>r.rating).filter(Number.isFinite);
-    if(allRatings.length){
-      artistToUpdate.rating=Math.round((allRatings.reduce((a,b)=>a+b,0)/allRatings.length)*10)/10;
-      artistToUpdate.reviews=allRatings.length;
-    }
-    // Refresh rating display inside the open modal
-    const ratingEl=document.querySelector('#artistModalBody .rating-text');
-    const countEl=document.querySelector('#artistModalBody .rating-count');
-    if(ratingEl) ratingEl.textContent=artistToUpdate.rating;
-    if(countEl) countEl.textContent=`(${artistToUpdate.reviews} ${t('reviews').toLowerCase()})`;
-    const stars=document.querySelectorAll('#artistModalBody .artist-detail-rating .sf, #artistModalBody .artist-detail-rating .se');
-    stars.forEach((el,i)=>{el.className=i<Math.round(artistToUpdate.rating)?'sf':'se';});
-  }
-  // Update review count section title
-  const rvSectionTitle=document.querySelector('#artistModalBody .section-title:last-of-type');
-  if(rvSectionTitle&&rvSectionTitle.textContent.includes(t('reviews'))) rvSectionTitle.textContent=`${t('reviews')} (${REVS[aid].length})`;
   document.getElementById('rvTxt').value='';revRating=0;
   window._pendingRevPhoto=null;
   document.getElementById('rvPhotoPreview').innerHTML='';
@@ -5669,36 +5647,9 @@ function loginWithGoogle() {
   const provider = new firebase.auth.GoogleAuthProvider();
   provider.addScope('email');
   provider.addScope('profile');
-  const isMobile = /Android|iPhone|iPad|iPod|Mobile/i.test(navigator.userAgent);
-  if (isMobile) {
-    // Su mobile i popup sono sempre bloccati → redirect diretto
-    showAuthError('⏳ Reindirizzamento a Google...');
-    auth.signInWithRedirect(provider).catch(e => showAuthError(authErrMsg(e.code)));
-    return;
-  }
-  // Desktop: prova popup
-  showAuthError('⏳ Apertura Google...');
-  auth.signInWithPopup(provider)
-    .then(async result => {
-      if (result.user) {
-        await _saveGoogleUser(result.user);
-        closeAuthModal();
-        showToast('👋 Benvenuto/a con Google, ' + (result.user.displayName || '').split(' ')[0] + '!');
-        setTimeout(() => loadCommunityData(), 300);
-      }
-    })
-    .catch(e => {
-      if (e.code === 'auth/popup-closed-by-user' || e.code === 'auth/cancelled-popup-request') {
-        showAuthError('');
-      } else if (e.code === 'auth/popup-blocked' || e.code === 'auth/operation-not-supported-in-this-environment') {
-        // Fallback redirect se popup bloccato anche su desktop
-        showAuthError('⏳ Reindirizzamento a Google...');
-        auth.signInWithRedirect(provider).catch(e2 => showAuthError(authErrMsg(e2.code)));
-      } else {
-        showAuthError(authErrMsg(e.code));
-        console.warn('Google login error:', e.code, e.message);
-      }
-    });
+  // signInWithRedirect is more reliable than popup on GitHub Pages and PWAs
+  showAuthError('⏳ Reindirizzamento a Google...');
+  auth.signInWithRedirect(provider).catch(e => showAuthError(authErrMsg(e.code)));
 }
 
 // Salva/aggiorna dati utente Google su Firestore
@@ -5711,7 +5662,7 @@ async function _saveGoogleUser(user) {
       email: user.email || '',
       photoURL: user.photoURL || '',
       joinedAt: firebase.firestore.FieldValue.serverTimestamp(),
-      role: 'fan'
+      role: 'user'
     }, { merge: true });
   } catch(e) {}
 }
@@ -6915,14 +6866,6 @@ function flyToSighting(lat, lng, sightingId) {
 // Apri il modal dettaglio segnalazione (con commenti)
 async function openSightingDetail(sightingId) {
   if (!db) return;
-  // On mobile, iOS Safari ignores z-index when a parent modal has -webkit-overflow-scrolling:touch.
-  // Solution: temporarily hide profileModal and restore it when sightingDetail closes.
-  const profileModal = document.getElementById('profileModal');
-  const profileWasOpen = profileModal.classList.contains('show');
-  if (profileWasOpen) {
-    profileModal.style.visibility = 'hidden';
-    window._sightingDetailRestoreProfile = true;
-  }
   const modal = document.getElementById('sightingDetailModal');
   const body  = document.getElementById('sightingDetailBody');
   const title = document.getElementById('sightingDetailTitle');
@@ -6941,23 +6884,12 @@ async function openSightingDetail(sightingId) {
 
     title.textContent = s.title || 'Segnalazione';
 
-    // Carica commenti (con fallback se l'indice Firestore non esiste ancora)
-    let commSnap;
-    try {
-      commSnap = await db.collection('sightingComments')
-        .where('sightingId', '==', sightingId)
-        .orderBy('createdAt', 'asc')
-        .get();
-    } catch(idxErr) {
-      if (idxErr.code === 'failed-precondition' || idxErr.code === 'unimplemented') {
-        // L'indice composito non esiste ancora — carica senza ordinamento
-        commSnap = await db.collection('sightingComments')
-          .where('sightingId', '==', sightingId)
-          .get();
-      } else { throw idxErr; }
-    }
-    const comments = commSnap.docs.map(d => ({ id: d.id, ...d.data() }))
-      .sort((a, b) => (a.createdAt?.toMillis?.() || 0) - (b.createdAt?.toMillis?.() || 0));
+    // Carica commenti
+    const commSnap = await db.collection('sightingComments')
+      .where('sightingId', '==', sightingId)
+      .orderBy('createdAt', 'asc')
+      .get();
+    const comments = commSnap.docs.map(d => ({ id: d.id, ...d.data() }));
 
     const commentsHtml = comments.length ? comments.map(c => {
       const cDate = c.createdAt?.toDate
@@ -7033,11 +6965,6 @@ async function openSightingDetail(sightingId) {
 
 function closeSightingDetail() {
   document.getElementById('sightingDetailModal').classList.remove('show');
-  // Restore profileModal if it was hidden for mobile z-index fix
-  if (window._sightingDetailRestoreProfile) {
-    window._sightingDetailRestoreProfile = false;
-    document.getElementById('profileModal').style.visibility = '';
-  }
 }
 
 // Invia un commento a una segnalazione
@@ -7248,7 +7175,7 @@ async function saveEditSegnalazione() {
 }
 
 // ── Modal overlay clicks ──
-document.getElementById('authModal').addEventListener('click', function(e){ if(e.target===this && !window._googlePopupOpen) closeAuthModal(); });
+document.getElementById('authModal').addEventListener('click', function(e){ if(e.target===this) closeAuthModal(); });
 document.getElementById('profileModal').addEventListener('click', function(e){ if(e.target===this) closeProfileModal(); });
 document.getElementById('segnalaModal').addEventListener('click', function(e){ if(e.target===this) closeSegnalaModal(); });
 document.getElementById('sightingDetailModal').addEventListener('click', function(e){ if(e.target===this) closeSightingDetail(); });
@@ -7565,11 +7492,10 @@ function renderWorksGrid() {
 }
 
 function removeWorkPhoto(i) {
-  if (i < worksPhotos.length) {
-    worksPhotos.splice(i, 1);
-  } else {
-    pendingWorksPhotos.splice(i - worksPhotos.length, 1);
-  }
+  const allPhotos = [...worksPhotos, ...pendingWorksPhotos];
+  allPhotos.splice(i, 1);
+  worksPhotos = allPhotos.slice(0, worksPhotos.length);
+  pendingWorksPhotos = allPhotos.slice(worksPhotos.length);
   renderWorksGrid();
 }
 
